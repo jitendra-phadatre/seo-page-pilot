@@ -28,14 +28,14 @@ export function TemplateStatusForm({
         <div className="space-y-2">
           <Label htmlFor="template">Page Template</Label>
           <Select 
-            value={formData.templateId || ""} 
+            value={formData.templateId || "none"} 
             onValueChange={(value) => handleSelectChange("templateId", value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a template" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No Template (Custom Page)</SelectItem>
+              <SelectItem value="none">No Template (Custom Page)</SelectItem>
               {templates.map((template) => (
                 <SelectItem key={template.id} value={template.id}>
                   {template.name}

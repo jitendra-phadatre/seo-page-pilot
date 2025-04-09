@@ -75,11 +75,19 @@ export function SeoPageForm() {
     setIsSaving(true);
     
     try {
+      // Create a copy of the form data to process
+      const processedData = { ...formData };
+      
+      // Handle the "none" template value
+      if (processedData.templateId === "none") {
+        processedData.templateId = null;
+      }
+      
       if (isNew) {
-        await createSeoPage(formData as Omit<SeoPage, "id" | "createdAt" | "updatedAt">);
+        await createSeoPage(processedData as Omit<SeoPage, "id" | "createdAt" | "updatedAt">);
         navigate("/seo-pages");
       } else {
-        await updateSeoPage(formData as SeoPage);
+        await updateSeoPage(processedData as SeoPage);
       }
     } catch (error) {
       console.error("Failed to save SEO page:", error);

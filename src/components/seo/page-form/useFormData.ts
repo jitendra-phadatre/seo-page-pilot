@@ -10,7 +10,7 @@ export function useFormData(initialData?: Partial<SeoPage>) {
     keywords: [],
     canonicalUrl: "",
     robotsDirective: "index,follow",
-    templateId: null,
+    templateId: "none",
     structuredData: null,
     publishStatus: "draft",
   });
