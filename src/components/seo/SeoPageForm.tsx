@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { 
   Card, 
@@ -49,8 +48,7 @@ export function SeoPageForm() {
     publishStatus: "draft",
   });
 
-  // Simulating data loading effect
-  useState(() => {
+  useEffect(() => {
     if (!isNew) {
       const loadPage = async () => {
         try {
@@ -71,7 +69,6 @@ export function SeoPageForm() {
       loadPage();
     }
 
-    // Load templates
     const loadTemplates = async () => {
       try {
         const templatesData = await fetchTemplates();
@@ -401,7 +398,6 @@ export function SeoPageForm() {
                 </p>
               </div>
               
-              {/* We would add more advanced options here */}
               <Alert className="mb-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>More options coming soon</AlertTitle>
