@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Robot, Save, RefreshCw } from "lucide-react";
+import { Bot, Save, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 export function RobotsEditor() {
@@ -12,8 +11,6 @@ export function RobotsEditor() {
   const [isSaving, setIsSaving] = useState(false);
   
   useEffect(() => {
-    // In a real application, this would fetch the robots.txt content from the server
-    // For now, we'll use the mock content from public/robots.txt
     const fetchRobotsContent = async () => {
       try {
         const response = await fetch("/robots.txt");
@@ -22,7 +19,6 @@ export function RobotsEditor() {
         setIsLoading(false);
       } catch (error) {
         console.error("Failed to fetch robots.txt:", error);
-        // Fallback content
         setRobotsContent(
 `User-agent: Googlebot
 Allow: /
@@ -49,7 +45,6 @@ Allow: /
   
   const handleSave = async () => {
     setIsSaving(true);
-    // In a real application, this would save the robots.txt content to the server
     await new Promise(resolve => setTimeout(resolve, 1000));
     toast.success("robots.txt saved successfully");
     setIsSaving(false);
@@ -82,7 +77,7 @@ Allow: /
     <Card>
       <CardHeader>
         <CardTitle className="text-xl flex items-center">
-          <Robot className="h-5 w-5 mr-2" />
+          <Bot className="h-5 w-5 mr-2" />
           Robots.txt Editor
         </CardTitle>
         <CardDescription>
