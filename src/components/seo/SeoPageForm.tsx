@@ -19,6 +19,7 @@ import { ContentEditor } from "./ContentEditor";
 import { StructuredDataTab } from "./page-form/StructuredDataTab";
 import { AdvancedSeoForm } from "./page-form/AdvancedSeoForm";
 import { SeoPageFormHeader } from "./page-form/SeoPageFormHeader";
+import { MultilingualSeoTab } from "./page-form/MultilingualSeoTab";
 import { useFormData } from "./page-form/useFormData";
 
 export function SeoPageForm() {
@@ -129,9 +130,10 @@ export function SeoPageForm() {
       />
 
       <Tabs defaultValue="basic">
-        <TabsList className="grid w-full grid-cols-4 mb-6">
+        <TabsList className="grid w-full grid-cols-5 mb-6">
           <TabsTrigger value="basic">Basic SEO</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
+          <TabsTrigger value="multilingual">Multilingual</TabsTrigger>
           <TabsTrigger value="structured">Structured Data</TabsTrigger>
           <TabsTrigger value="advanced">Advanced</TabsTrigger>
         </TabsList>
@@ -152,6 +154,20 @@ export function SeoPageForm() {
         
         <TabsContent value="content">
           <ContentEditor />
+        </TabsContent>
+        
+        <TabsContent value="multilingual">
+          {!isNew ? (
+            <MultilingualSeoTab 
+              pageId={id || ""}
+              pageSlug={formData.slug || ""}
+              siteUrl="https://example.com"
+            />
+          ) : (
+            <div className="text-center py-12">
+              <p>Please save the page first to enable multilingual settings.</p>
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="structured">

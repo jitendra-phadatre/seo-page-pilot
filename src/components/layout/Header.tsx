@@ -1,15 +1,17 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { 
   Bell, 
   Search, 
   Settings, 
   User, 
   Menu, 
-  X
+  X,
+  LogOut,
 } from "lucide-react";
 import { 
   DropdownMenu,
@@ -18,9 +20,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export function Header() {
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(3);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // In a real app with auth, this would call the auth logout function
+    // For now, we'll just navigate to the home page
+    navigate("/");
+  };
+
+  const handleNotificationClick = () => {
+    setNotificationCount(0);
+  };
 
   return (
     <header className="border-b bg-background sticky top-0 z-30">
@@ -56,6 +75,11 @@ export function Header() {
               type="search"
               placeholder="Search pages..."
               className="w-full bg-muted pl-9 focus-visible:ring-primary"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  navigate(`/search?q=${encodeURIComponent(e.currentTarget.value)}`);
+                }
+              }}
             />
           </div>
         </div>
@@ -74,12 +98,56 @@ export function Header() {
 
         {/* Actions */}
         <div className="flex items-center space-x-1">
-          <Button variant="ghost" size="icon" aria-label="Notifications">
-            <Bell size={20} className="text-muted-foreground" />
-          </Button>
-          <Button variant="ghost" size="icon" aria-label="Settings">
+          {/* Notifications */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Notifications" className="relative" onClick={handleNotificationClick}>
+                <Bell size={20} className="text-muted-foreground" />
+                {notificationCount > 0 && (
+                  <Badge 
+                    variant="success" 
+                    className="absolute -top-1 -right-1 h-5 min-w-[20px] flex items-center justify-center p-0 text-xs"
+                  >
+                    {notificationCount}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0" align="end">
+              <div className="p-3 border-b">
+                <h4 className="font-medium">Notifications</h4>
+              </div>
+              <div className="py-2">
+                <div className="px-4 py-2 hover:bg-muted cursor-pointer">
+                  <p className="text-sm font-medium">New page created</p>
+                  <p className="text-xs text-muted-foreground">2 minutes ago</p>
+                </div>
+                <div className="px-4 py-2 hover:bg-muted cursor-pointer">
+                  <p className="text-sm font-medium">SEO performance improved</p>
+                  <p className="text-xs text-muted-foreground">1 hour ago</p>
+                </div>
+                <div className="px-4 py-2 hover:bg-muted cursor-pointer">
+                  <p className="text-sm font-medium">Google position update</p>
+                  <p className="text-xs text-muted-foreground">Yesterday</p>
+                </div>
+              </div>
+              <div className="p-2 border-t text-center">
+                <Button variant="ghost" size="sm" className="w-full">View all notifications</Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Settings */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            aria-label="Settings"
+            onClick={() => navigate("/settings")}
+          >
             <Settings size={20} className="text-muted-foreground" />
           </Button>
+
+          {/* Profile dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -92,10 +160,13 @@ export function Header() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/profile")}>Profile</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/settings")}>Settings</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Logout</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -110,6 +181,12 @@ export function Header() {
               type="search"
               placeholder="Search pages..."
               className="w-full bg-muted pl-9 focus-visible:ring-primary"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  navigate(`/search?q=${encodeURIComponent(e.currentTarget.value)}`);
+                  setShowMobileSearch(false);
+                }
+              }}
             />
           </div>
         </div>
