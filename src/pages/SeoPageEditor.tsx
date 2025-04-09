@@ -1,15 +1,15 @@
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import DashboardOverview from "@/components/dashboard/DashboardOverview";
+import SeoPageForm from "@/components/seo/SeoPageForm";
 
-const Index = () => {
+const SeoPageEditor = () => {
   return (
     <DashboardLayout>
       <div className="content-area">
-        <DashboardOverview />
+        <SeoPageForm />
       </div>
     </DashboardLayout>
   );
 };
 
-export default Index;
+export default SeoPageEditor;
