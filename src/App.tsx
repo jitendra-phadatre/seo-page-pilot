@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import SeoPages from "./pages/SeoPages";
 import SeoPageEditor from "./pages/SeoPageEditor";
 import Analytics from "./pages/Analytics";
+import InternalLinks from "./pages/InternalLinks";
+import SitemapRobots from "./pages/SitemapRobots";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +25,8 @@ const App = () => (
           <Route path="/seo-pages" element={<SeoPages />} />
           <Route path="/seo-pages/:id" element={<SeoPageEditor />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/internal-links" element={<InternalLinks />} />
+          <Route path="/sitemap" element={<SitemapRobots />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
