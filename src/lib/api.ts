@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { SeoPage, Template, TemplateField, mockSeoPages, mockTemplates, mockAnalyticsData } from "./mock-data";
 import { Json } from "@/integrations/supabase/types";
@@ -24,17 +25,33 @@ const jsonToTemplateFields = (json: Json | null): TemplateField[] => {
   
   // If it's already an array, try to cast each item
   if (Array.isArray(json)) {
-    return json.map(field => ({
-      name: field.name as string,
-      type: field.type as 'text' | 'textarea' | 'number' | 'select' | 'boolean',
-      label: field.label as string,
-      required: field.required as boolean,
-      options: field.options as string[] | undefined,
-    }));
+    return json.map(field => {
+      if (typeof field === 'object' && field !== null) {
+        return {
+          name: String(field.name || ''),
+          type: (field.type as 'text' | 'textarea' | 'number' | 'select' | 'boolean') || 'text',
+          label: String(field.label || ''),
+          required: Boolean(field.required || false),
+          options: Array.isArray(field.options) ? field.options.map(String) : undefined,
+        };
+      }
+      return {
+        name: '',
+        type: 'text',
+        label: '',
+        required: false
+      };
+    });
   }
   
   // If it's an object but not an array, return empty array
   return [];
+};
+
+// Helper function to convert object to Json type for Supabase
+const objectToJson = (obj: object | null): Json => {
+  if (obj === null) return null;
+  return obj as Json;
 };
 
 // Parse the publishStatus to ensure it's a valid value
@@ -132,7 +149,7 @@ export const createSeoPage = async (page: Omit<SeoPage, "id" | "createdAt" | "up
       robots_directive: page.robotsDirective,
       publish_status: page.publishStatus,
       template_id: page.templateId === 'none' ? null : page.templateId,
-      structured_data: page.structuredData
+      structured_data: objectToJson(page.structuredData as object)
     })
     .select()
     .single();
@@ -174,7 +191,7 @@ export const updateSeoPage = async (page: SeoPage): Promise<SeoPage> => {
       robots_directive: page.robotsDirective,
       publish_status: page.publishStatus,
       template_id: page.templateId === 'none' ? null : page.templateId,
-      structured_data: page.structuredData
+      structured_data: objectToJson(page.structuredData as object)
     })
     .eq('id', page.id)
     .select()
