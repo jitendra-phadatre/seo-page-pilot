@@ -50,20 +50,29 @@ export function SeoPageForm() {
     queryKey: ["seoPage", id],
     queryFn: () => fetchSeoPageById(id as string),
     enabled: !isNew && !!id,
-    onSuccess: (data) => {
-      if (data) {
-        setFormData(data);
-      } else {
-        toast.error("Page not found");
+    meta: {
+      onSuccess: (data: SeoPage | undefined) => {
+        if (data) {
+          setFormData(data);
+        } else {
+          toast.error("Page not found");
+          navigate("/seo-pages");
+        }
+      },
+      onError: (error: Error) => {
+        console.error("Failed to load page data:", error);
+        toast.error("Failed to load page data");
         navigate("/seo-pages");
       }
-    },
-    onError: (error) => {
-      console.error("Failed to load page data:", error);
-      toast.error("Failed to load page data");
-      navigate("/seo-pages");
     }
   });
+
+  // Set form data when page data is loaded
+  useEffect(() => {
+    if (pageData) {
+      setFormData(pageData);
+    }
+  }, [pageData, setFormData]);
 
   // Create page mutation
   const createPageMutation = useMutation({

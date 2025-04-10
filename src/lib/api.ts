@@ -1,6 +1,22 @@
 import { supabase } from "@/integrations/supabase/client";
 import { SeoPage, Template, mockSeoPages, mockTemplates, mockAnalyticsData } from "./mock-data";
+import { Json } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+
+// Helper function to convert JSON to proper types
+const jsonToObject = (json: Json | null): object | null => {
+  if (json === null) return null;
+  if (typeof json === 'object') return json as object;
+  if (typeof json === 'string') {
+    try {
+      return JSON.parse(json);
+    } catch (e) {
+      console.error("Failed to parse JSON string:", e);
+      return null;
+    }
+  }
+  return null;
+};
 
 // SEO Pages API
 export const fetchSeoPages = async (): Promise<SeoPage[]> => {
@@ -27,9 +43,9 @@ export const fetchSeoPages = async (): Promise<SeoPage[]> => {
     keywords: page.keywords || [],
     canonicalUrl: page.canonical_url,
     robotsDirective: page.robots_directive,
-    publishStatus: page.publish_status,
+    publishStatus: page.publish_status as "published" | "draft" | "archived",
     templateId: page.template_id,
-    structuredData: page.structured_data,
+    structuredData: jsonToObject(page.structured_data),
     createdAt: page.created_at,
     updatedAt: page.updated_at,
     lastPosition: page.analytics_data?.[0]?.position || null,
@@ -65,9 +81,9 @@ export const fetchSeoPageById = async (id: string): Promise<SeoPage | undefined>
     keywords: data.keywords || [],
     canonicalUrl: data.canonical_url,
     robotsDirective: data.robots_directive,
-    publishStatus: data.publish_status,
+    publishStatus: data.publish_status as "published" | "draft" | "archived",
     templateId: data.template_id,
-    structuredData: data.structured_data,
+    structuredData: jsonToObject(data.structured_data),
     createdAt: data.created_at,
     updatedAt: data.updated_at,
     lastPosition: data.analytics_data?.[0]?.position || null,
@@ -89,7 +105,7 @@ export const createSeoPage = async (page: Omit<SeoPage, "id" | "createdAt" | "up
       robots_directive: page.robotsDirective,
       publish_status: page.publishStatus,
       template_id: page.templateId === 'none' ? null : page.templateId,
-      structured_data: page.structuredData
+      structured_data: page.structuredData as Json
     })
     .select()
     .single();
@@ -110,9 +126,9 @@ export const createSeoPage = async (page: Omit<SeoPage, "id" | "createdAt" | "up
     keywords: data.keywords || [],
     canonicalUrl: data.canonical_url,
     robotsDirective: data.robots_directive,
-    publishStatus: data.publish_status,
+    publishStatus: data.publish_status as "published" | "draft" | "archived",
     templateId: data.template_id,
-    structuredData: data.structured_data,
+    structuredData: jsonToObject(data.structured_data),
     createdAt: data.created_at,
     updatedAt: data.updated_at
   };
@@ -131,7 +147,7 @@ export const updateSeoPage = async (page: SeoPage): Promise<SeoPage> => {
       robots_directive: page.robotsDirective,
       publish_status: page.publishStatus,
       template_id: page.templateId === 'none' ? null : page.templateId,
-      structured_data: page.structuredData
+      structured_data: page.structuredData as Json
     })
     .eq('id', page.id)
     .select()
@@ -153,9 +169,9 @@ export const updateSeoPage = async (page: SeoPage): Promise<SeoPage> => {
     keywords: data.keywords || [],
     canonicalUrl: data.canonical_url,
     robotsDirective: data.robots_directive,
-    publishStatus: data.publish_status,
+    publishStatus: data.publish_status as "published" | "draft" | "archived",
     templateId: data.template_id,
-    structuredData: data.structured_data,
+    structuredData: jsonToObject(data.structured_data),
     createdAt: data.created_at,
     updatedAt: data.updated_at
   };
@@ -192,7 +208,7 @@ export const fetchTemplates = async (): Promise<Template[]> => {
     id: template.id,
     name: template.name,
     description: template.description || '',
-    fields: template.fields
+    fields: Array.isArray(template.fields) ? template.fields : []
   }));
 };
 
@@ -314,9 +330,9 @@ export async function searchPages(query: string): Promise<SeoPage[]> {
     keywords: page.keywords || [],
     canonicalUrl: page.canonical_url,
     robotsDirective: page.robots_directive,
-    publishStatus: page.publish_status,
+    publishStatus: page.publish_status as "published" | "draft" | "archived",
     templateId: page.template_id,
-    structuredData: page.structured_data,
+    structuredData: jsonToObject(page.structured_data),
     createdAt: page.created_at,
     updatedAt: page.updated_at
   }));
