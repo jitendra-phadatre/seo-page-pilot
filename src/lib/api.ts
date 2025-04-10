@@ -25,21 +25,31 @@ const jsonToTemplateFields = (json: Json | null): TemplateField[] => {
   
   // If it's already an array, try to cast each item
   if (Array.isArray(json)) {
-    return json.map(field => {
-      if (typeof field === 'object' && field !== null) {
+    return json.map(item => {
+      // Ensure item is an object and not null
+      if (item === null || typeof item !== 'object' || Array.isArray(item)) {
         return {
-          name: String(field.name || ''),
-          type: (field.type as 'text' | 'textarea' | 'number' | 'select' | 'boolean') || 'text',
-          label: String(field.label || ''),
-          required: Boolean(field.required || false),
-          options: Array.isArray(field.options) ? field.options.map(String) : undefined,
+          name: '',
+          type: 'text' as const,
+          label: '',
+          required: false
         };
       }
+      
+      // Access properties safely
+      const fieldObj = item as { [key: string]: Json };
+      
       return {
-        name: '',
-        type: 'text',
-        label: '',
-        required: false
+        name: typeof fieldObj.name === 'string' ? fieldObj.name : '',
+        type: (typeof fieldObj.type === 'string' && 
+              ['text', 'textarea', 'number', 'select', 'boolean'].includes(fieldObj.type)) 
+              ? fieldObj.type as 'text' | 'textarea' | 'number' | 'select' | 'boolean'
+              : 'text',
+        label: typeof fieldObj.label === 'string' ? fieldObj.label : '',
+        required: typeof fieldObj.required === 'boolean' ? fieldObj.required : false,
+        options: Array.isArray(fieldObj.options) 
+                ? fieldObj.options.map(opt => typeof opt === 'string' ? opt : String(opt))
+                : undefined
       };
     });
   }
