@@ -48,6 +48,7 @@ import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface User {
   id: string;
@@ -70,6 +71,7 @@ const Users = () => {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const queryClient = useQueryClient();
+  const { session } = useAuth();
 
   // Fetch users from Supabase
   const { data: users = [], isLoading, error } = useQuery({
@@ -84,7 +86,7 @@ const Users = () => {
         throw new Error(`Error fetching users: ${error.message}`);
       }
       
-      return data || [];
+      return data as User[] || [];
     }
   });
 
@@ -112,13 +114,13 @@ const Users = () => {
           email: userData.email,
           role: userData.role,
           status: userData.status
-        }])
+        }] as any)
         .select()
         .single();
         
       if (error) throw new Error(`Error creating user profile: ${error.message}`);
       
-      return data;
+      return data as User;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -141,14 +143,17 @@ const Users = () => {
     mutationFn: async ({ userId, newStatus }: { userId: string, newStatus: string }) => {
       const { data, error } = await supabase
         .from('users')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .update({ 
+          status: newStatus, 
+          updated_at: new Date().toISOString() 
+        } as any)
         .eq('id', userId)
         .select()
         .single();
         
       if (error) throw new Error(`Error updating user: ${error.message}`);
       
-      return data;
+      return data as User;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
