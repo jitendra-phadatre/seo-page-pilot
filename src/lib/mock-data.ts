@@ -1,36 +1,4 @@
 
-export interface SeoPage {
-  id: string;
-  slug: string;
-  title: string;
-  metaDescription: string;
-  keywords: string[];
-  canonicalUrl: string | null;
-  robotsDirective: string;
-  templateId: string | null;
-  structuredData: object | null;
-  publishStatus: 'draft' | 'published' | 'archived';
-  createdAt: string;
-  updatedAt: string;
-  lastImpressions?: number;
-  lastClicks?: number;
-  lastPosition?: number;
-}
-
-export interface Template {
-  id: string;
-  name: string;
-  description: string;
-  dynamicFields: string[];
-}
-
-export interface AnalyticsData {
-  period: string;
-  impressions: number;
-  clicks: number;
-  position: number;
-}
-
 export const mockSeoPages: SeoPage[] = [
   {
     id: "1",
@@ -65,6 +33,7 @@ export const mockSeoPages: SeoPage[] = [
     lastImpressions: 12560,
     lastClicks: 348,
     lastPosition: 2.3,
+    content: "<h2>Discover the Best Hotels in Paris</h2><p>Paris, the City of Light, offers a wide range of accommodation options from luxury palaces to charming boutique hotels. Our carefully curated list highlights the top 10 hotels that combine excellent location, service, and value.</p>"
   },
   {
     id: "2",
@@ -82,6 +51,7 @@ export const mockSeoPages: SeoPage[] = [
     lastImpressions: 9870,
     lastClicks: 275,
     lastPosition: 3.1,
+    content: "<h2>London's Finest Accommodations</h2><p>From historic hotels in Westminster to modern options in Shoreditch, London offers accommodations for every taste and budget. This guide covers the best centrally-located options with easy access to major attractions.</p>"
   },
   {
     id: "3",
@@ -99,6 +69,7 @@ export const mockSeoPages: SeoPage[] = [
     lastImpressions: 5420,
     lastClicks: 147,
     lastPosition: 5.7,
+    content: "<h2>New York's Culinary Scene</h2><p>New York City's diverse food scene offers everything from Michelin-starred restaurants to beloved street food vendors. Our local experts have selected the absolute best dining experiences across all five boroughs.</p>"
   },
   {
     id: "4",
@@ -116,6 +87,7 @@ export const mockSeoPages: SeoPage[] = [
     lastImpressions: 8740,
     lastClicks: 312,
     lastPosition: 1.8,
+    content: "<h2>Miami's Beautiful Beaches</h2><p>Miami is world-famous for its stunning beaches with crystal clear waters and white sand. This local's guide provides insider tips on the best spots, parking information, and amenities at each beach.</p>"
   },
   {
     id: "5",
@@ -133,29 +105,6 @@ export const mockSeoPages: SeoPage[] = [
     lastImpressions: 3250,
     lastClicks: 95,
     lastPosition: 8.2,
+    content: "<h2>Colorado's Majestic Hiking Trails</h2><p>Colorado offers some of the most breathtaking hiking opportunities in North America, from easy nature walks to challenging mountain ascents. This guide covers trails suitable for all experience levels.</p>"
   },
-];
-
-export const mockTemplates: Template[] = [
-  {
-    id: "1",
-    name: "City Hotel Template",
-    description: "Template for city hotel pages with customizable sections for top hotels, map, and amenities",
-    dynamicFields: ["cityName", "countryName", "hotelCount", "topAreaName"],
-  },
-  {
-    id: "2",
-    name: "Local Guide Template",
-    description: "Template for local guide pages with sections for attractions, tips, and recommendations",
-    dynamicFields: ["locationName", "categoryName", "itemCount", "bestSeason"],
-  },
-];
-
-export const mockAnalyticsData: AnalyticsData[] = [
-  { period: "Jan", impressions: 45000, clicks: 3200, position: 3.8 },
-  { period: "Feb", impressions: 52000, clicks: 3800, position: 3.5 },
-  { period: "Mar", impressions: 58000, clicks: 4100, position: 3.2 },
-  { period: "Apr", impressions: 67000, clicks: 4700, position: 2.9 },
-  { period: "May", impressions: 72000, clicks: 5200, position: 2.7 },
-  { period: "Jun", impressions: 78000, clicks: 5600, position: 2.5 },
 ];

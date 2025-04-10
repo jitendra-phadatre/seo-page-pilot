@@ -7,9 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { Search as SearchIcon, FileText, Link as LinkIcon, Globe, Shield } from "lucide-react";
+import { Search as SearchIcon, FileText, Link as LinkIcon, Globe, Shield, SlidersHorizontal } from "lucide-react";
 import { SeoPage } from "@/lib/mock-data";
 import { searchPages } from "@/lib/api";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Search = () => {
   const location = useLocation();
@@ -17,6 +25,14 @@ const Search = () => {
   const [searchQuery, setSearchQuery] = useState(query);
   const [searchResults, setSearchResults] = useState<SeoPage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [filters, setFilters] = useState({
+    status: {
+      published: true,
+      draft: true,
+      archived: true,
+    },
+    sortBy: "relevance" as "relevance" | "date" | "title",
+  });
 
   const performSearch = async (q: string) => {
     if (!q) return setSearchResults([]);
@@ -24,7 +40,22 @@ const Search = () => {
     setIsLoading(true);
     try {
       const results = await searchPages(q);
-      setSearchResults(results);
+      
+      // Apply filters
+      let filteredResults = results.filter(page => 
+        (filters.status.published && page.publishStatus === "published") ||
+        (filters.status.draft && page.publishStatus === "draft") ||
+        (filters.status.archived && page.publishStatus === "archived")
+      );
+      
+      // Apply sorting
+      if (filters.sortBy === "date") {
+        filteredResults.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      } else if (filters.sortBy === "title") {
+        filteredResults.sort((a, b) => a.title.localeCompare(b.title));
+      }
+      
+      setSearchResults(filteredResults);
     } catch (error) {
       console.error("Search failed:", error);
     } finally {
@@ -34,7 +65,7 @@ const Search = () => {
 
   useEffect(() => {
     performSearch(query);
-  }, [query]);
+  }, [query, filters]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,6 +90,23 @@ const Search = () => {
     }
   };
 
+  const toggleFilter = (category: keyof typeof filters.status, value: boolean) => {
+    setFilters(prev => ({
+      ...prev,
+      status: {
+        ...prev.status,
+        [category]: value,
+      }
+    }));
+  };
+
+  const setSortBy = (value: "relevance" | "date" | "title") => {
+    setFilters(prev => ({
+      ...prev,
+      sortBy: value,
+    }));
+  };
+
   return (
     <DashboardLayout>
       <div className="content-area">
@@ -80,6 +128,58 @@ const Search = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" type="button">
+                    <SlidersHorizontal className="h-4 w-4 mr-2" />
+                    Filters
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56">
+                  <DropdownMenuLabel>Status</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem
+                    checked={filters.status.published}
+                    onCheckedChange={(value) => toggleFilter("published", !!value)}
+                  >
+                    Published
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={filters.status.draft}
+                    onCheckedChange={(value) => toggleFilter("draft", !!value)}
+                  >
+                    Draft
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={filters.status.archived}
+                    onCheckedChange={(value) => toggleFilter("archived", !!value)}
+                  >
+                    Archived
+                  </DropdownMenuCheckboxItem>
+                  
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Sort By</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem
+                    checked={filters.sortBy === "relevance"}
+                    onCheckedChange={() => setSortBy("relevance")}
+                  >
+                    Relevance
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={filters.sortBy === "date"}
+                    onCheckedChange={() => setSortBy("date")}
+                  >
+                    Last Updated
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={filters.sortBy === "title"}
+                    onCheckedChange={() => setSortBy("title")}
+                  >
+                    Title (A-Z)
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button type="submit">Search</Button>
             </form>
           </CardContent>
@@ -116,6 +216,11 @@ const Search = () => {
                       <Badge variant="outline" className="text-xs">
                         {result.publishStatus.charAt(0).toUpperCase() + result.publishStatus.slice(1)}
                       </Badge>
+                      {result.keywords.slice(0, 3).map((keyword, idx) => (
+                        <Badge key={idx} variant="secondary" className="text-xs">
+                          {keyword}
+                        </Badge>
+                      ))}
                     </div>
                   </div>
                 </CardContent>

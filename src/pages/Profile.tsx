@@ -1,207 +1,259 @@
 
 import { useState } from "react";
-import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { Save } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
-import * as z from "zod";
+import { z } from "zod";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
-const profileSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email"),
-  jobTitle: z.string().optional(),
-  company: z.string().optional(),
-  bio: z.string().max(160, "Bio must be 160 characters or less").optional(),
+const profileFormSchema = z.object({
+  name: z.string().min(2).max(50),
+  email: z.string().email(),
 });
 
+const securityFormSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
+}).refine(data => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
+type SecurityFormValues = z.infer<typeof securityFormSchema>;
+
 const Profile = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const form = useForm<z.infer<typeof profileSchema>>({
-    resolver: zodResolver(profileSchema),
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const profileForm = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      name: "John Doe",
-      email: "john@example.com",
-      jobTitle: "SEO Specialist",
-      company: "PagePilot Inc.",
-      bio: "SEO professional with 5+ years of experience in technical SEO and content optimization.",
-    },
+      name: user?.user_metadata?.name || "",
+      email: user?.email || "",
+    }
   });
 
-  const handleSubmit = (data: z.infer<typeof profileSchema>) => {
-    setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Profile data:", data);
-      toast.success("Profile updated successfully");
-      setIsLoading(false);
-    }, 1000);
+  const securityForm = useForm<SecurityFormValues>({
+    resolver: zodResolver(securityFormSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    }
+  });
+
+  const handleProfileSubmit = async (data: ProfileFormValues) => {
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        email: data.email,
+        data: {
+          name: data.name,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: error.message,
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   };
-  
+
+  const handlePasswordSubmit = async (data: SecurityFormValues) => {
+    setIsUpdating(true);
+    try {
+      // Note: For security reasons, Supabase doesn't provide a way to verify the current password server-side
+      // In a production app, you might want a custom endpoint for this
+      const { error } = await supabase.auth.updateUser({
+        password: data.newPassword,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password updated",
+        description: "Your password has been updated successfully.",
+      });
+      
+      securityForm.reset();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: error.message,
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Get initials for avatar fallback
+  const email = user?.email || "";
+  const initials = email.substring(0, 2).toUpperCase();
+
   return (
     <DashboardLayout>
       <div className="content-area">
         <div className="mb-6">
-          <h1 className="page-title">My Profile</h1>
-          <p className="page-subtitle">
-            Manage your account information and preferences
-          </p>
+          <h1 className="page-title">Profile</h1>
+          <p className="page-subtitle">Manage your account settings</p>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Profile Summary Card */}
-          <Card>
-            <CardHeader className="text-center">
-              <div className="flex justify-center mb-4">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src="/placeholder.svg" />
-                  <AvatarFallback>JD</AvatarFallback>
-                </Avatar>
-              </div>
-              <CardTitle>John Doe</CardTitle>
-              <CardDescription>SEO Specialist</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-center space-x-2">
-                <Badge>Admin</Badge>
-                <Badge variant="outline">Team</Badge>
-              </div>
-              <p className="text-center text-sm text-muted-foreground">
-                Member since March 2023
-              </p>
-              <Separator />
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Pages Created</span>
-                  <span className="font-medium">42</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Last Login</span>
-                  <span className="font-medium">Today, 11:32 AM</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Profile Edit Form */}
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Edit Profile</CardTitle>
-              <CardDescription>
-                Update your profile information
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form 
-                  id="profile-form" 
-                  onSubmit={form.handleSubmit(handleSubmit)} 
-                  className="space-y-4"
-                >
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="email" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile">
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Your Avatar</CardTitle>
+                  <CardDescription>
+                    Your profile picture will be shown across the platform
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center gap-4">
+                  <Avatar className="h-32 w-32">
+                    <AvatarImage src="" alt={user?.email || ""} />
+                    <AvatarFallback className="text-4xl">{initials}</AvatarFallback>
+                  </Avatar>
+                  <Button variant="outline">Upload picture</Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Personal Information</CardTitle>
+                  <CardDescription>
+                    Update your personal details
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...profileForm}>
+                    <form onSubmit={profileForm.handleSubmit(handleProfileSubmit)} className="space-y-4">
+                      <FormField
+                        control={profileForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Full name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Your name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={profileForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="you@example.com" disabled {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <Button type="submit" disabled={isUpdating}>
+                        {isUpdating ? "Saving..." : "Save changes"}
+                      </Button>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="security">
+            <Card>
+              <CardHeader>
+                <CardTitle>Change Password</CardTitle>
+                <CardDescription>
+                  Update your password to keep your account secure
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...securityForm}>
+                  <form onSubmit={securityForm.handleSubmit(handlePasswordSubmit)} className="space-y-4">
                     <FormField
-                      control={form.control}
-                      name="jobTitle"
+                      control={securityForm.control}
+                      name="currentPassword"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Job Title</FormLabel>
+                          <FormLabel>Current password</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input type="password" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
-                      control={form.control}
-                      name="company"
+                      control={securityForm.control}
+                      name="newPassword"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Company</FormLabel>
+                          <FormLabel>New password</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input type="password" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="bio"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Bio</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            placeholder="Write a short bio about yourself"
-                            className="resize-none"
-                            rows={3}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Write a short bio about yourself (max 160 characters)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </form>
-              </Form>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                type="submit" 
-                form="profile-form"
-                disabled={isLoading}
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {isLoading ? "Saving..." : "Save Changes"}
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
+
+                    <FormField
+                      control={securityForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Confirm new password</FormLabel>
+                          <FormControl>
+                            <Input type="password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Button type="submit" disabled={isUpdating}>
+                      {isUpdating ? "Updating..." : "Update password"}
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );

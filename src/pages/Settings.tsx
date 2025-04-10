@@ -1,90 +1,101 @@
 
 import { useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Check, Save } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { FileCode, Globe, LucideCloud } from "lucide-react";
 
-const generalSchema = z.object({
-  siteName: z.string().min(2, "Site name must be at least 2 characters"),
+const deploymentSchema = z.object({
+  awsRegion: z.string().min(1, "AWS Region is required"),
+  lambdaMemory: z.coerce.number().int().min(128).max(10240),
+  lambdaTimeout: z.coerce.number().int().min(1).max(900),
+});
+
+type DeploymentSettings = z.infer<typeof deploymentSchema>;
+
+const notificationSchema = z.object({
+  emailNotifications: z.boolean(),
+  pagePublishNotifications: z.boolean(),
+  analyticsReportNotifications: z.boolean(),
+  securityAlertNotifications: z.boolean(),
+});
+
+type NotificationSettings = z.infer<typeof notificationSchema>;
+
+const globalSchema = z.object({
   siteUrl: z.string().url("Please enter a valid URL"),
-  companyName: z.string().optional(),
-  adminEmail: z.string().email("Please enter a valid email address"),
-  siteDescription: z.string().optional(),
+  defaultLanguage: z.string().min(2, "Language code is required"),
+  timeZone: z.string().min(1, "Timezone is required"),
 });
 
-const seoSchema = z.object({
-  defaultTitle: z.string().min(2, "Default title must be at least 2 characters"),
-  defaultDescription: z.string().optional(),
-  googleVerification: z.string().optional(),
-  bingVerification: z.string().optional(),
-  indexSite: z.boolean().default(true),
-});
-
-const integrationsSchema = z.object({
-  googleAnalyticsId: z.string().optional(),
-  googleTagManagerId: z.string().optional(),
-  facebookPixelId: z.string().optional(),
-  hotjarId: z.string().optional(),
-});
+type GlobalSettings = z.infer<typeof globalSchema>;
 
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState("general");
-
-  const generalForm = useForm<z.infer<typeof generalSchema>>({
-    resolver: zodResolver(generalSchema),
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const deploymentForm = useForm<DeploymentSettings>({
+    resolver: zodResolver(deploymentSchema),
     defaultValues: {
-      siteName: "My SEO Website",
+      awsRegion: "us-east-1",
+      lambdaMemory: 512,
+      lambdaTimeout: 30,
+    },
+  });
+  
+  const notificationForm = useForm<NotificationSettings>({
+    resolver: zodResolver(notificationSchema),
+    defaultValues: {
+      emailNotifications: true,
+      pagePublishNotifications: true,
+      analyticsReportNotifications: true,
+      securityAlertNotifications: true,
+    },
+  });
+  
+  const globalForm = useForm<GlobalSettings>({
+    resolver: zodResolver(globalSchema),
+    defaultValues: {
       siteUrl: "https://example.com",
-      companyName: "My Company",
-      adminEmail: "admin@example.com",
-      siteDescription: "A website optimized for search engines",
+      defaultLanguage: "en-US",
+      timeZone: "UTC",
     },
   });
-
-  const seoForm = useForm<z.infer<typeof seoSchema>>({
-    resolver: zodResolver(seoSchema),
-    defaultValues: {
-      defaultTitle: "{page} | {site}",
-      defaultDescription: "Default page description for all pages without custom descriptions",
-      googleVerification: "",
-      bingVerification: "",
-      indexSite: true,
-    },
-  });
-
-  const integrationsForm = useForm<z.infer<typeof integrationsSchema>>({
-    resolver: zodResolver(integrationsSchema),
-    defaultValues: {
-      googleAnalyticsId: "",
-      googleTagManagerId: "",
-      facebookPixelId: "",
-      hotjarId: "",
-    },
-  });
-
-  const handleGeneralSubmit = (data: z.infer<typeof generalSchema>) => {
-    console.log("General settings saved:", data);
-    toast.success("General settings saved successfully");
+  
+  const handleDeploymentSubmit = (data: DeploymentSettings) => {
+    setIsSaving(true);
+    setTimeout(() => {
+      console.log("Deployment settings:", data);
+      toast.success("Deployment settings saved successfully");
+      setIsSaving(false);
+    }, 1000);
   };
-
-  const handleSeoSubmit = (data: z.infer<typeof seoSchema>) => {
-    console.log("SEO settings saved:", data);
-    toast.success("SEO settings saved successfully");
+  
+  const handleNotificationSubmit = (data: NotificationSettings) => {
+    setIsSaving(true);
+    setTimeout(() => {
+      console.log("Notification settings:", data);
+      toast.success("Notification settings saved successfully");
+      setIsSaving(false);
+    }, 1000);
   };
-
-  const handleIntegrationsSubmit = (data: z.infer<typeof integrationsSchema>) => {
-    console.log("Integrations settings saved:", data);
-    toast.success("Integration settings saved successfully");
+  
+  const handleGlobalSubmit = (data: GlobalSettings) => {
+    setIsSaving(true);
+    setTimeout(() => {
+      console.log("Global settings:", data);
+      toast.success("Global settings saved successfully");
+      setIsSaving(false);
+    }, 1000);
   };
 
   return (
@@ -92,226 +103,116 @@ const Settings = () => {
       <div className="content-area">
         <div className="mb-6">
           <h1 className="page-title">Settings</h1>
-          <p className="page-subtitle">
-            Configure your SEO application settings
-          </p>
+          <p className="page-subtitle">Manage application settings</p>
         </div>
-
-        <Tabs defaultValue="general" onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="seo">SEO</TabsTrigger>
-            <TabsTrigger value="integrations">Integrations</TabsTrigger>
+        
+        <Tabs defaultValue="general" className="space-y-6">
+          <TabsList className="mb-4">
+            <TabsTrigger value="general">
+              <Globe className="mr-2 h-4 w-4" />
+              General
+            </TabsTrigger>
+            <TabsTrigger value="notifications">
+              <FileCode className="mr-2 h-4 w-4" />
+              Notifications
+            </TabsTrigger>
+            <TabsTrigger value="deployment">
+              <LucideCloud className="mr-2 h-4 w-4" />
+              AWS Deployment
+            </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="general" className="py-4">
+          <TabsContent value="general">
             <Card>
               <CardHeader>
-                <CardTitle>General Settings</CardTitle>
+                <CardTitle>Global Settings</CardTitle>
                 <CardDescription>
-                  Configure basic site settings
+                  Configure global settings for your SEO management tool
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Form {...generalForm}>
-                  <form 
-                    id="general-settings-form" 
-                    onSubmit={generalForm.handleSubmit(handleGeneralSubmit)} 
-                    className="space-y-4"
-                  >
+                <Form {...globalForm}>
+                  <form onSubmit={globalForm.handleSubmit(handleGlobalSubmit)} className="space-y-6">
                     <FormField
-                      control={generalForm.control}
-                      name="siteName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Site Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            The name of your website
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={generalForm.control}
+                      control={globalForm.control}
                       name="siteUrl"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Site URL</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input placeholder="https://example.com" {...field} />
                           </FormControl>
                           <FormDescription>
-                            The full URL of your website (with https://)
+                            The base URL of your website
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
+                    
                     <FormField
-                      control={generalForm.control}
-                      name="companyName"
+                      control={globalForm.control}
+                      name="defaultLanguage"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Company Name</FormLabel>
+                          <FormLabel>Default Language</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input placeholder="en-US" {...field} />
                           </FormControl>
                           <FormDescription>
-                            Your company or organization name
+                            The default language for your content
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
+                    
                     <FormField
-                      control={generalForm.control}
-                      name="adminEmail"
+                      control={globalForm.control}
+                      name="timeZone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Admin Email</FormLabel>
+                          <FormLabel>Time Zone</FormLabel>
                           <FormControl>
-                            <Input {...field} type="email" />
+                            <Input placeholder="UTC" {...field} />
                           </FormControl>
                           <FormDescription>
-                            Primary contact email for admin notifications
+                            Your preferred time zone for reporting
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
-                    <FormField
-                      control={generalForm.control}
-                      name="siteDescription"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Site Description</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} rows={3} />
-                          </FormControl>
-                          <FormDescription>
-                            A brief description of your website
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    
+                    <Button type="submit" disabled={isSaving}>
+                      {isSaving ? "Saving..." : "Save settings"}
+                    </Button>
                   </form>
                 </Form>
               </CardContent>
-              <CardFooter>
-                <Button 
-                  type="submit" 
-                  form="general-settings-form"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </Button>
-              </CardFooter>
             </Card>
           </TabsContent>
           
-          <TabsContent value="seo" className="py-4">
+          <TabsContent value="notifications">
             <Card>
               <CardHeader>
-                <CardTitle>SEO Settings</CardTitle>
+                <CardTitle>Notification Preferences</CardTitle>
                 <CardDescription>
-                  Configure search engine optimization settings
+                  Control which notifications you receive
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Form {...seoForm}>
-                  <form 
-                    id="seo-settings-form" 
-                    onSubmit={seoForm.handleSubmit(handleSeoSubmit)} 
-                    className="space-y-4"
-                  >
+                <Form {...notificationForm}>
+                  <form onSubmit={notificationForm.handleSubmit(handleNotificationSubmit)} className="space-y-6">
                     <FormField
-                      control={seoForm.control}
-                      name="defaultTitle"
+                      control={notificationForm.control}
+                      name="emailNotifications"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Default Title Format</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            Use {'{page}'} for page name and {'{site}'} for site name
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={seoForm.control}
-                      name="defaultDescription"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Default Meta Description</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} rows={3} />
-                          </FormControl>
-                          <FormDescription>
-                            Used when a page doesn't have a custom description
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={seoForm.control}
-                      name="googleVerification"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Google Verification</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="meta verification code" />
-                          </FormControl>
-                          <FormDescription>
-                            Google Search Console verification code
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={seoForm.control}
-                      name="bingVerification"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Bing Verification</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="meta verification code" />
-                          </FormControl>
-                          <FormDescription>
-                            Bing Webmaster Tools verification code
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={seoForm.control}
-                      name="indexSite"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                           <div className="space-y-0.5">
-                            <FormLabel className="text-base">
-                              Allow Site Indexing
-                            </FormLabel>
+                            <FormLabel>Email Notifications</FormLabel>
                             <FormDescription>
-                              Allow search engines to index your site
+                              Receive notifications via email
                             </FormDescription>
                           </div>
                           <FormControl>
@@ -323,109 +224,157 @@ const Settings = () => {
                         </FormItem>
                       )}
                     />
+                    
+                    <FormField
+                      control={notificationForm.control}
+                      name="pagePublishNotifications"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                          <div className="space-y-0.5">
+                            <FormLabel>Page Publish Events</FormLabel>
+                            <FormDescription>
+                              Get notified when pages are published
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={notificationForm.control}
+                      name="analyticsReportNotifications"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                          <div className="space-y-0.5">
+                            <FormLabel>Analytics Reports</FormLabel>
+                            <FormDescription>
+                              Get weekly analytics report summaries
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={notificationForm.control}
+                      name="securityAlertNotifications"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                          <div className="space-y-0.5">
+                            <FormLabel>Security Alerts</FormLabel>
+                            <FormDescription>
+                              Get notified about security-related events
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button type="submit" disabled={isSaving}>
+                      {isSaving ? "Saving..." : "Save preferences"}
+                    </Button>
                   </form>
                 </Form>
               </CardContent>
-              <CardFooter>
-                <Button type="submit" form="seo-settings-form">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </Button>
-              </CardFooter>
             </Card>
           </TabsContent>
           
-          <TabsContent value="integrations" className="py-4">
+          <TabsContent value="deployment">
             <Card>
               <CardHeader>
-                <CardTitle>Integrations</CardTitle>
+                <CardTitle>AWS Lambda Deployment</CardTitle>
                 <CardDescription>
-                  Configure third-party service integrations
+                  Configure settings for deploying to AWS Lambda
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Form {...integrationsForm}>
-                  <form 
-                    id="integrations-settings-form" 
-                    onSubmit={integrationsForm.handleSubmit(handleIntegrationsSubmit)} 
-                    className="space-y-4"
-                  >
+                <Form {...deploymentForm}>
+                  <form onSubmit={deploymentForm.handleSubmit(handleDeploymentSubmit)} className="space-y-6">
                     <FormField
-                      control={integrationsForm.control}
-                      name="googleAnalyticsId"
+                      control={deploymentForm.control}
+                      name="awsRegion"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Google Analytics ID</FormLabel>
+                          <FormLabel>AWS Region</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="G-XXXXXXXXXX" />
+                            <Input placeholder="us-east-1" {...field} />
                           </FormControl>
                           <FormDescription>
-                            Google Analytics 4 measurement ID
+                            The AWS region to deploy your application
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
+                    
                     <FormField
-                      control={integrationsForm.control}
-                      name="googleTagManagerId"
+                      control={deploymentForm.control}
+                      name="lambdaMemory"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Google Tag Manager ID</FormLabel>
+                          <FormLabel>Lambda Memory (MB)</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="GTM-XXXXXXX" />
+                            <Input type="number" {...field} min={128} max={10240} step={128} />
                           </FormControl>
                           <FormDescription>
-                            Google Tag Manager container ID
+                            Memory allocation for the Lambda function (128-10240 MB)
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
+                    
                     <FormField
-                      control={integrationsForm.control}
-                      name="facebookPixelId"
+                      control={deploymentForm.control}
+                      name="lambdaTimeout"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Facebook Pixel ID</FormLabel>
+                          <FormLabel>Lambda Timeout (seconds)</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="XXXXXXXXXX" />
+                            <Input type="number" {...field} min={1} max={900} />
                           </FormControl>
                           <FormDescription>
-                            Meta Pixel ID for conversion tracking
+                            Function timeout in seconds (1-900)
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
-                    <FormField
-                      control={integrationsForm.control}
-                      name="hotjarId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Hotjar Site ID</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="XXXXXXX" />
-                          </FormControl>
-                          <FormDescription>
-                            Hotjar site ID for analytics and feedback
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    
+                    <Separator className="my-4" />
+                    
+                    <div className="flex items-center gap-2">
+                      <Button type="submit" disabled={isSaving}>
+                        {isSaving ? "Saving..." : "Save deployment settings"}
+                      </Button>
+                      <Button type="button" variant="outline">
+                        Test Configuration
+                      </Button>
+                      <Button type="button" variant="destructive">
+                        Deploy to AWS
+                      </Button>
+                    </div>
                   </form>
                 </Form>
               </CardContent>
-              <CardFooter>
-                <Button type="submit" form="integrations-settings-form">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </Button>
-              </CardFooter>
             </Card>
           </TabsContent>
         </Tabs>
