@@ -1,4 +1,48 @@
 
+// Define type interfaces first
+export interface SeoPage {
+  id: string;
+  slug: string;
+  title: string;
+  metaDescription: string | null;
+  keywords: string[];
+  canonicalUrl: string | null;
+  robotsDirective: string;
+  templateId: string | null;
+  structuredData: object | null;
+  publishStatus: 'published' | 'draft' | 'archived';
+  createdAt: string;
+  updatedAt: string;
+  lastImpressions?: number;
+  lastClicks?: number;
+  lastPosition?: number;
+  content?: string;
+}
+
+export interface Template {
+  id: string;
+  name: string;
+  description: string;
+  fields: TemplateField[];
+}
+
+export interface TemplateField {
+  name: string;
+  type: 'text' | 'textarea' | 'number' | 'select' | 'boolean';
+  label: string;
+  required: boolean;
+  options?: string[]; // For select fields
+}
+
+export interface AnalyticsData {
+  id: string;
+  period: string;
+  impressions: number;
+  clicks: number;
+  position: number;
+}
+
+// Mock data
 export const mockSeoPages: SeoPage[] = [
   {
     id: "1",
@@ -107,4 +151,104 @@ export const mockSeoPages: SeoPage[] = [
     lastPosition: 8.2,
     content: "<h2>Colorado's Majestic Hiking Trails</h2><p>Colorado offers some of the most breathtaking hiking opportunities in North America, from easy nature walks to challenging mountain ascents. This guide covers trails suitable for all experience levels.</p>"
   },
+];
+
+export const mockTemplates: Template[] = [
+  {
+    id: "1",
+    name: "Hotel Listing Template",
+    description: "Template for hotel listing pages with structured data",
+    fields: [
+      {
+        name: "hotelName",
+        type: "text",
+        label: "Hotel Name",
+        required: true
+      },
+      {
+        name: "hotelRating",
+        type: "number",
+        label: "Star Rating",
+        required: true
+      },
+      {
+        name: "priceRange",
+        type: "select",
+        label: "Price Range",
+        required: true,
+        options: ["$", "$$", "$$$", "$$$$", "$$$$$"]
+      }
+    ]
+  },
+  {
+    id: "2",
+    name: "Restaurant Listing Template",
+    description: "Template for restaurant listing pages with structured data",
+    fields: [
+      {
+        name: "restaurantName",
+        type: "text",
+        label: "Restaurant Name",
+        required: true
+      },
+      {
+        name: "cuisine",
+        type: "select",
+        label: "Cuisine Type",
+        required: true,
+        options: ["Italian", "French", "Japanese", "American", "Mexican", "Indian", "Other"]
+      },
+      {
+        name: "reservationRequired",
+        type: "boolean",
+        label: "Reservation Required",
+        required: false
+      }
+    ]
+  }
+];
+
+export const mockAnalyticsData: AnalyticsData[] = [
+  {
+    id: "1",
+    period: "Jan 2025",
+    impressions: 8500,
+    clicks: 320,
+    position: 4.2
+  },
+  {
+    id: "2",
+    period: "Feb 2025",
+    impressions: 9200,
+    clicks: 356,
+    position: 3.8
+  },
+  {
+    id: "3",
+    period: "Mar 2025",
+    impressions: 10500,
+    clicks: 420,
+    position: 3.5
+  },
+  {
+    id: "4",
+    period: "Apr 2025",
+    impressions: 11800,
+    clicks: 512,
+    position: 3.2
+  },
+  {
+    id: "5",
+    period: "May 2025",
+    impressions: 13200,
+    clicks: 620,
+    position: 2.9
+  },
+  {
+    id: "6",
+    period: "Jun 2025",
+    impressions: 15000,
+    clicks: 725,
+    position: 2.5
+  }
 ];
