@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { SeoPage, Template, mockSeoPages, mockTemplates, mockAnalyticsData } from "./mock-data";
+import { SeoPage, Template, TemplateField, mockSeoPages, mockTemplates, mockAnalyticsData } from "./mock-data";
 import { Json } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 
@@ -16,6 +16,33 @@ const jsonToObject = (json: Json | null): object | null => {
     }
   }
   return null;
+};
+
+// Helper function to safely cast JSON to TemplateField[] array
+const jsonToTemplateFields = (json: Json | null): TemplateField[] => {
+  if (json === null) return [];
+  
+  // If it's already an array, try to cast each item
+  if (Array.isArray(json)) {
+    return json.map(field => ({
+      name: field.name as string,
+      type: field.type as 'text' | 'textarea' | 'number' | 'select' | 'boolean',
+      label: field.label as string,
+      required: field.required as boolean,
+      options: field.options as string[] | undefined,
+    }));
+  }
+  
+  // If it's an object but not an array, return empty array
+  return [];
+};
+
+// Parse the publishStatus to ensure it's a valid value
+const parsePublishStatus = (status: string): 'published' | 'draft' | 'archived' => {
+  if (status === 'published' || status === 'draft' || status === 'archived') {
+    return status as 'published' | 'draft' | 'archived';
+  }
+  return 'draft'; // Default fallback
 };
 
 // SEO Pages API
@@ -39,11 +66,11 @@ export const fetchSeoPages = async (): Promise<SeoPage[]> => {
     title: page.title,
     slug: page.slug,
     metaDescription: page.meta_description,
-    content: page.content,
+    content: page.content || '',
     keywords: page.keywords || [],
     canonicalUrl: page.canonical_url,
-    robotsDirective: page.robots_directive,
-    publishStatus: page.publish_status as "published" | "draft" | "archived",
+    robotsDirective: page.robots_directive || 'index,follow',
+    publishStatus: parsePublishStatus(page.publish_status),
     templateId: page.template_id,
     structuredData: jsonToObject(page.structured_data),
     createdAt: page.created_at,
@@ -77,11 +104,11 @@ export const fetchSeoPageById = async (id: string): Promise<SeoPage | undefined>
     title: data.title,
     slug: data.slug,
     metaDescription: data.meta_description,
-    content: data.content,
+    content: data.content || '',
     keywords: data.keywords || [],
     canonicalUrl: data.canonical_url,
-    robotsDirective: data.robots_directive,
-    publishStatus: data.publish_status as "published" | "draft" | "archived",
+    robotsDirective: data.robots_directive || 'index,follow',
+    publishStatus: parsePublishStatus(data.publish_status),
     templateId: data.template_id,
     structuredData: jsonToObject(data.structured_data),
     createdAt: data.created_at,
@@ -105,7 +132,7 @@ export const createSeoPage = async (page: Omit<SeoPage, "id" | "createdAt" | "up
       robots_directive: page.robotsDirective,
       publish_status: page.publishStatus,
       template_id: page.templateId === 'none' ? null : page.templateId,
-      structured_data: page.structuredData as Json
+      structured_data: page.structuredData
     })
     .select()
     .single();
@@ -122,11 +149,11 @@ export const createSeoPage = async (page: Omit<SeoPage, "id" | "createdAt" | "up
     title: data.title,
     slug: data.slug,
     metaDescription: data.meta_description,
-    content: data.content,
+    content: data.content || '',
     keywords: data.keywords || [],
     canonicalUrl: data.canonical_url,
-    robotsDirective: data.robots_directive,
-    publishStatus: data.publish_status as "published" | "draft" | "archived",
+    robotsDirective: data.robots_directive || 'index,follow',
+    publishStatus: parsePublishStatus(data.publish_status),
     templateId: data.template_id,
     structuredData: jsonToObject(data.structured_data),
     createdAt: data.created_at,
@@ -147,7 +174,7 @@ export const updateSeoPage = async (page: SeoPage): Promise<SeoPage> => {
       robots_directive: page.robotsDirective,
       publish_status: page.publishStatus,
       template_id: page.templateId === 'none' ? null : page.templateId,
-      structured_data: page.structuredData as Json
+      structured_data: page.structuredData
     })
     .eq('id', page.id)
     .select()
@@ -165,11 +192,11 @@ export const updateSeoPage = async (page: SeoPage): Promise<SeoPage> => {
     title: data.title,
     slug: data.slug,
     metaDescription: data.meta_description,
-    content: data.content,
+    content: data.content || '',
     keywords: data.keywords || [],
     canonicalUrl: data.canonical_url,
-    robotsDirective: data.robots_directive,
-    publishStatus: data.publish_status as "published" | "draft" | "archived",
+    robotsDirective: data.robots_directive || 'index,follow',
+    publishStatus: parsePublishStatus(data.publish_status),
     templateId: data.template_id,
     structuredData: jsonToObject(data.structured_data),
     createdAt: data.created_at,
@@ -208,7 +235,7 @@ export const fetchTemplates = async (): Promise<Template[]> => {
     id: template.id,
     name: template.name,
     description: template.description || '',
-    fields: Array.isArray(template.fields) ? template.fields : []
+    fields: jsonToTemplateFields(template.fields)
   }));
 };
 
@@ -326,11 +353,11 @@ export async function searchPages(query: string): Promise<SeoPage[]> {
     title: page.title,
     slug: page.slug,
     metaDescription: page.meta_description,
-    content: page.content,
+    content: page.content || '',
     keywords: page.keywords || [],
     canonicalUrl: page.canonical_url,
-    robotsDirective: page.robots_directive,
-    publishStatus: page.publish_status as "published" | "draft" | "archived",
+    robotsDirective: page.robots_directive || 'index,follow',
+    publishStatus: parsePublishStatus(page.publish_status),
     templateId: page.template_id,
     structuredData: jsonToObject(page.structured_data),
     createdAt: page.created_at,
@@ -417,14 +444,6 @@ export async function getPageMultilingualData(pageId: string): Promise<Multiling
 
 // Update multilingual data for a page
 export async function updatePageMultilingualData(data: MultilingualSeoPageData): Promise<MultilingualSeoPageData> {
-  // Start a transaction
-  const { error: transactionError } = await supabase.rpc('begin_transaction');
-  
-  if (transactionError) {
-    console.error("Error starting transaction:", transactionError);
-    throw transactionError;
-  }
-  
   try {
     // Delete existing hreflang tags
     const { error: deleteHreflangError } = await supabase
@@ -436,44 +455,42 @@ export async function updatePageMultilingualData(data: MultilingualSeoPageData):
     
     // Insert new hreflang tags
     if (data.hreflangs.length > 0) {
+      const hreflangRows = data.hreflangs.map(tag => ({
+        page_id: data.pageId,
+        locale: tag.locale,
+        url: tag.url
+      }));
+      
       const { error: insertHreflangError } = await supabase
         .from('hreflang_tags')
-        .insert(data.hreflangs.map(tag => ({
-          page_id: data.pageId,
-          locale: tag.locale,
-          url: tag.url
-        })));
+        .insert(hreflangRows);
       
       if (insertHreflangError) throw insertHreflangError;
     }
     
     // Update existing content or insert new content
     for (const content of data.localizedContent) {
+      const contentRow = {
+        page_id: data.pageId,
+        locale: content.locale,
+        title: content.title,
+        meta_description: content.metaDescription,
+        content: content.content
+      };
+      
       const { error: upsertContentError } = await supabase
         .from('multilingual_content')
-        .upsert({
-          page_id: data.pageId,
-          locale: content.locale,
-          title: content.title,
-          meta_description: content.metaDescription,
-          content: content.content
-        }, {
+        .upsert(contentRow, {
           onConflict: 'page_id,locale'
         });
       
       if (upsertContentError) throw upsertContentError;
     }
     
-    // Commit transaction
-    const { error: commitError } = await supabase.rpc('commit_transaction');
-    if (commitError) throw commitError;
-    
     toast.success("Multilingual data updated successfully");
     return data;
     
   } catch (error) {
-    // Rollback transaction on error
-    await supabase.rpc('rollback_transaction');
     console.error("Error updating multilingual data:", error);
     throw error;
   }

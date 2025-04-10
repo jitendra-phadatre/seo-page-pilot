@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -51,18 +50,14 @@ export function SeoPageForm() {
     queryFn: () => fetchSeoPageById(id as string),
     enabled: !isNew && !!id,
     meta: {
-      onSuccess: (data: SeoPage | undefined) => {
+      onSettled: (data: SeoPage | undefined, error: Error | null) => {
         if (data) {
           setFormData(data);
-        } else {
-          toast.error("Page not found");
+        } else if (error) {
+          console.error("Failed to load page data:", error);
+          toast.error("Failed to load page data");
           navigate("/seo-pages");
         }
-      },
-      onError: (error: Error) => {
-        console.error("Failed to load page data:", error);
-        toast.error("Failed to load page data");
-        navigate("/seo-pages");
       }
     }
   });
