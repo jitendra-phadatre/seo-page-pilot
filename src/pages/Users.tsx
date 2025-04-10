@@ -1,5 +1,6 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,7 @@ import { Check, MoreHorizontal, Plus, Search, Trash, UserPlus } from "lucide-rea
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
 
 interface User {
   id: string;
@@ -53,37 +55,12 @@ interface User {
   email: string;
   role: string;
   status: string;
-  lastLogin: string;
+  last_login: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 const Users = () => {
-  const [users, setUsers] = useState<User[]>([
-    { 
-      id: "1", 
-      name: "John Doe", 
-      email: "john.doe@example.com", 
-      role: "Admin", 
-      status: "Active",
-      lastLogin: "2023-04-09 14:22"
-    },
-    { 
-      id: "2", 
-      name: "Jane Smith", 
-      email: "jane.smith@example.com", 
-      role: "Editor", 
-      status: "Active",
-      lastLogin: "2023-04-08 09:15"
-    },
-    { 
-      id: "3", 
-      name: "Bob Johnson", 
-      email: "bob.johnson@example.com", 
-      role: "Viewer", 
-      status: "Inactive",
-      lastLogin: "2023-03-25 11:30"
-    },
-  ]);
-
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [newUser, setNewUser] = useState({
     name: "",
@@ -92,11 +69,114 @@ const Users = () => {
     status: "Active"
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const queryClient = useQueryClient();
 
-  const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Fetch users from Supabase
+  const { data: users = [], isLoading, error } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        throw new Error(`Error fetching users: ${error.message}`);
+      }
+      
+      return data || [];
+    }
+  });
+
+  // Create user mutation
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: Omit<User, "id" | "created_at" | "updated_at" | "last_login">) => {
+      // First create auth user
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: userData.email,
+        email_confirm: true,
+        password: 'temporaryPassword123', // You might want to generate a random password or implement invitation flow
+        user_metadata: { name: userData.name }
+      });
+      
+      if (authError) throw new Error(`Error creating user: ${authError.message}`);
+      
+      if (!authData.user) throw new Error('No user was created');
+      
+      // Then create profile in users table
+      const { data, error } = await supabase
+        .from('users')
+        .insert([{
+          id: authData.user.id,
+          name: userData.name,
+          email: userData.email,
+          role: userData.role,
+          status: userData.status
+        }])
+        .select()
+        .single();
+        
+      if (error) throw new Error(`Error creating user profile: ${error.message}`);
+      
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success("User added successfully");
+      setIsUserDialogOpen(false);
+      setNewUser({
+        name: "",
+        email: "",
+        role: "Viewer",
+        status: "Active"
+      });
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    }
+  });
+
+  // Update user status mutation
+  const updateUserStatusMutation = useMutation({
+    mutationFn: async ({ userId, newStatus }: { userId: string, newStatus: string }) => {
+      const { data, error } = await supabase
+        .from('users')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', userId)
+        .select()
+        .single();
+        
+      if (error) throw new Error(`Error updating user: ${error.message}`);
+      
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success("User status updated successfully");
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    }
+  });
+
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      // Delete from auth (this will cascade to the users table due to foreign key)
+      const { error } = await supabase.auth.admin.deleteUser(userId);
+      
+      if (error) throw new Error(`Error deleting user: ${error.message}`);
+      
+      return userId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success("User deleted successfully");
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    }
+  });
 
   const handleAddUser = () => {
     // Validate form
@@ -105,36 +185,24 @@ const Users = () => {
       return;
     }
 
-    // Create new user with unique ID
-    const newUserId = (users.length + 1).toString();
-    const userToAdd = {
-      ...newUser, 
-      id: newUserId,
-      lastLogin: "Never"
-    };
-
-    setUsers([...users, userToAdd]);
-    toast.success("User added successfully");
-    setIsUserDialogOpen(false);
-    setNewUser({
-      name: "",
-      email: "",
-      role: "Viewer",
-      status: "Active"
-    });
+    createUserMutation.mutate(newUser);
   };
 
   const handleDeleteUser = (userId: string) => {
-    setUsers(users.filter(user => user.id !== userId));
-    toast.success("User deleted successfully");
+    if (window.confirm("Are you sure you want to delete this user?")) {
+      deleteUserMutation.mutate(userId);
+    }
   };
 
   const handleUpdateUserStatus = (userId: string, newStatus: string) => {
-    setUsers(users.map(user => 
-      user.id === userId ? { ...user, status: newStatus } : user
-    ));
-    toast.success(`User status updated to ${newStatus}`);
+    updateUserStatusMutation.mutate({ userId, newStatus });
   };
+
+  // Filter users based on search term
+  const filteredUsers = users.filter(user => 
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <DashboardLayout>
@@ -178,7 +246,19 @@ const Users = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.length === 0 ? (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      Loading users...
+                    </TableCell>
+                  </TableRow>
+                ) : error ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-destructive">
+                      Error loading users: {(error as Error).message}
+                    </TableCell>
+                  </TableRow>
+                ) : filteredUsers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       No users found
@@ -199,7 +279,7 @@ const Users = () => {
                           {user.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>{user.lastLogin}</TableCell>
+                      <TableCell>{user.last_login ? new Date(user.last_login).toLocaleString() : "Never"}</TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -229,27 +309,29 @@ const Users = () => {
             </Table>
           </div>
 
-          <div className="p-4 border-t">
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious href="#" />
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink href="#" isActive>1</PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink href="#">2</PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationEllipsis />
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationNext href="#" />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
+          {users.length > 10 && (
+            <div className="p-4 border-t">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious href="#" />
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationLink href="#" isActive>1</PaginationLink>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationLink href="#">2</PaginationLink>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationNext href="#" />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </div>
 
         <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
@@ -327,9 +409,9 @@ const Users = () => {
               <Button variant="outline" onClick={() => setIsUserDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAddUser}>
+              <Button onClick={handleAddUser} disabled={createUserMutation.isPending}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add User
+                {createUserMutation.isPending ? "Adding..." : "Add User"}
               </Button>
             </DialogFooter>
           </DialogContent>
