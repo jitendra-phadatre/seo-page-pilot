@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { 
   createSeoPage, 
   updateSeoPage, 
@@ -9,7 +10,7 @@ import {
   fetchTemplates,
   deleteSeoPage 
 } from "@/lib/api";
-import { SeoPage, Template } from "@/lib/mock-data";
+import { SeoPage } from "@/lib/mock-data";
 import { toast } from "sonner";
 
 // Import refactored components
@@ -25,10 +26,9 @@ import { useFormData } from "./page-form/useFormData";
 export function SeoPageForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const isNew = id === "new";
-  const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
-  const [templates, setTemplates] = useState<Template[]>([]);
   
   const { 
     formData, 
@@ -39,37 +39,71 @@ export function SeoPageForm() {
     handleStructuredDataChange 
   } = useFormData();
 
-  useEffect(() => {
-    if (!isNew) {
-      const loadPage = async () => {
-        try {
-          const pageData = await fetchSeoPageById(id as string);
-          if (pageData) {
-            setFormData(pageData);
-          } else {
-            toast.error("Page not found");
-            navigate("/seo-pages");
-          }
-          setIsLoading(false);
-        } catch (error) {
-          console.error("Failed to load page data:", error);
-          toast.error("Failed to load page data");
-          setIsLoading(false);
-        }
-      };
-      loadPage();
-    }
+  // Fetch templates
+  const { data: templates = [] } = useQuery({
+    queryKey: ["templates"],
+    queryFn: fetchTemplates,
+  });
 
-    const loadTemplates = async () => {
-      try {
-        const templatesData = await fetchTemplates();
-        setTemplates(templatesData);
-      } catch (error) {
-        console.error("Failed to load templates:", error);
+  // Fetch page data if editing an existing page
+  const { data: pageData, isLoading } = useQuery({
+    queryKey: ["seoPage", id],
+    queryFn: () => fetchSeoPageById(id as string),
+    enabled: !isNew && !!id,
+    onSuccess: (data) => {
+      if (data) {
+        setFormData(data);
+      } else {
+        toast.error("Page not found");
+        navigate("/seo-pages");
       }
-    };
-    loadTemplates();
-  }, [id, navigate, isNew, setFormData]);
+    },
+    onError: (error) => {
+      console.error("Failed to load page data:", error);
+      toast.error("Failed to load page data");
+      navigate("/seo-pages");
+    }
+  });
+
+  // Create page mutation
+  const createPageMutation = useMutation({
+    mutationFn: createSeoPage,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seoPages"] });
+      navigate("/seo-pages");
+    },
+    onError: (error) => {
+      console.error("Failed to create page:", error);
+      toast.error("Failed to create page");
+    }
+  });
+
+  // Update page mutation
+  const updatePageMutation = useMutation({
+    mutationFn: updateSeoPage,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seoPages"] });
+      queryClient.invalidateQueries({ queryKey: ["seoPage", id] });
+      toast.success("Page updated successfully");
+    },
+    onError: (error) => {
+      console.error("Failed to update page:", error);
+      toast.error("Failed to update page");
+    }
+  });
+
+  // Delete page mutation
+  const deletePageMutation = useMutation({
+    mutationFn: deleteSeoPage,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seoPages"] });
+      navigate("/seo-pages");
+    },
+    onError: (error) => {
+      console.error("Failed to delete page:", error);
+      toast.error("Failed to delete page");
+    }
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,14 +119,12 @@ export function SeoPageForm() {
       }
       
       if (isNew) {
-        await createSeoPage(processedData as Omit<SeoPage, "id" | "createdAt" | "updatedAt">);
-        navigate("/seo-pages");
+        await createPageMutation.mutateAsync(processedData as Omit<SeoPage, "id" | "createdAt" | "updatedAt">);
       } else {
-        await updateSeoPage(processedData as SeoPage);
+        await updatePageMutation.mutateAsync(processedData as SeoPage);
       }
     } catch (error) {
-      console.error("Failed to save SEO page:", error);
-      toast.error("Failed to save SEO page");
+      // Errors are handled in mutation callbacks
     } finally {
       setIsSaving(false);
     }
@@ -101,11 +133,9 @@ export function SeoPageForm() {
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this page? This action cannot be undone.")) {
       try {
-        await deleteSeoPage(id as string);
-        navigate("/seo-pages");
+        await deletePageMutation.mutateAsync(id as string);
       } catch (error) {
-        console.error("Failed to delete page:", error);
-        toast.error("Failed to delete page");
+        // Error is handled in mutation callback
       }
     }
   };
@@ -124,7 +154,7 @@ export function SeoPageForm() {
     <form onSubmit={handleSubmit}>
       <SeoPageFormHeader 
         isNew={isNew}
-        isSaving={isSaving}
+        isSaving={isSaving || createPageMutation.isPending || updatePageMutation.isPending}
         slug={formData.slug || ""}
         handleDelete={handleDelete}
       />

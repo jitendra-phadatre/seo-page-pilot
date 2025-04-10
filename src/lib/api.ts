@@ -1,66 +1,210 @@
+import { supabase } from "@/integrations/supabase/client";
 import { SeoPage, Template, mockSeoPages, mockTemplates, mockAnalyticsData } from "./mock-data";
 import { toast } from "sonner";
 
-// Simulate API delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 // SEO Pages API
 export const fetchSeoPages = async (): Promise<SeoPage[]> => {
-  await delay(800);
-  return [...mockSeoPages];
+  const { data, error } = await supabase
+    .from('seo_pages')
+    .select(`
+      *,
+      analytics_data(position, impressions)
+    `)
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    console.error("Error fetching SEO pages:", error);
+    throw error;
+  }
+
+  // Format the data to match our SeoPage type
+  return data.map(page => ({
+    id: page.id,
+    title: page.title,
+    slug: page.slug,
+    metaDescription: page.meta_description,
+    content: page.content,
+    keywords: page.keywords || [],
+    canonicalUrl: page.canonical_url,
+    robotsDirective: page.robots_directive,
+    publishStatus: page.publish_status,
+    templateId: page.template_id,
+    structuredData: page.structured_data,
+    createdAt: page.created_at,
+    updatedAt: page.updated_at,
+    lastPosition: page.analytics_data?.[0]?.position || null,
+    lastImpressions: page.analytics_data?.[0]?.impressions || null
+  }));
 };
 
 export const fetchSeoPageById = async (id: string): Promise<SeoPage | undefined> => {
-  await delay(600);
-  return mockSeoPages.find(page => page.id === id);
+  const { data, error } = await supabase
+    .from('seo_pages')
+    .select(`
+      *,
+      analytics_data(position, impressions)
+    `)
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // No data found
+      return undefined;
+    }
+    console.error("Error fetching SEO page:", error);
+    throw error;
+  }
+
+  return {
+    id: data.id,
+    title: data.title,
+    slug: data.slug,
+    metaDescription: data.meta_description,
+    content: data.content,
+    keywords: data.keywords || [],
+    canonicalUrl: data.canonical_url,
+    robotsDirective: data.robots_directive,
+    publishStatus: data.publish_status,
+    templateId: data.template_id,
+    structuredData: data.structured_data,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+    lastPosition: data.analytics_data?.[0]?.position || null,
+    lastImpressions: data.analytics_data?.[0]?.impressions || null
+  };
 };
 
 export const createSeoPage = async (page: Omit<SeoPage, "id" | "createdAt" | "updatedAt">): Promise<SeoPage> => {
-  await delay(1000);
-  
-  const newPage: SeoPage = {
-    ...page,
-    id: `${mockSeoPages.length + 1}`,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+  // Convert our UI model to match database schema
+  const { data, error } = await supabase
+    .from('seo_pages')
+    .insert({
+      title: page.title,
+      slug: page.slug,
+      meta_description: page.metaDescription,
+      content: page.content,
+      keywords: page.keywords,
+      canonical_url: page.canonicalUrl,
+      robots_directive: page.robotsDirective,
+      publish_status: page.publishStatus,
+      template_id: page.templateId === 'none' ? null : page.templateId,
+      structured_data: page.structuredData
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating SEO page:", error);
+    throw error;
+  }
   
   toast.success("SEO page created successfully");
-  return newPage;
+  
+  return {
+    id: data.id,
+    title: data.title,
+    slug: data.slug,
+    metaDescription: data.meta_description,
+    content: data.content,
+    keywords: data.keywords || [],
+    canonicalUrl: data.canonical_url,
+    robotsDirective: data.robots_directive,
+    publishStatus: data.publish_status,
+    templateId: data.template_id,
+    structuredData: data.structured_data,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at
+  };
 };
 
 export const updateSeoPage = async (page: SeoPage): Promise<SeoPage> => {
-  await delay(1000);
-  
-  const updatedPage: SeoPage = {
-    ...page,
-    updatedAt: new Date().toISOString(),
-  };
+  const { data, error } = await supabase
+    .from('seo_pages')
+    .update({
+      title: page.title,
+      slug: page.slug,
+      meta_description: page.metaDescription,
+      content: page.content,
+      keywords: page.keywords,
+      canonical_url: page.canonicalUrl,
+      robots_directive: page.robotsDirective,
+      publish_status: page.publishStatus,
+      template_id: page.templateId === 'none' ? null : page.templateId,
+      structured_data: page.structuredData
+    })
+    .eq('id', page.id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating SEO page:", error);
+    throw error;
+  }
   
   toast.success("SEO page updated successfully");
-  return updatedPage;
+  
+  return {
+    id: data.id,
+    title: data.title,
+    slug: data.slug,
+    metaDescription: data.meta_description,
+    content: data.content,
+    keywords: data.keywords || [],
+    canonicalUrl: data.canonical_url,
+    robotsDirective: data.robots_directive,
+    publishStatus: data.publish_status,
+    templateId: data.template_id,
+    structuredData: data.structured_data,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at
+  };
 };
 
 export const deleteSeoPage = async (id: string): Promise<void> => {
-  await delay(800);
+  const { error } = await supabase
+    .from('seo_pages')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error("Error deleting SEO page:", error);
+    throw error;
+  }
+  
   toast.success("SEO page deleted successfully");
 };
 
 // Templates API
 export const fetchTemplates = async (): Promise<Template[]> => {
-  await delay(700);
-  return [...mockTemplates];
+  const { data, error } = await supabase
+    .from('templates')
+    .select('*')
+    .order('name');
+
+  if (error) {
+    console.error("Error fetching templates:", error);
+    // Fall back to mock data if there's an error
+    return [...mockTemplates];
+  }
+
+  return data.map(template => ({
+    id: template.id,
+    name: template.name,
+    description: template.description || '',
+    fields: template.fields
+  }));
 };
 
-// Analytics API
+// Analytics API - Keep mock data for now
 export const fetchAnalyticsData = async (): Promise<typeof mockAnalyticsData> => {
-  await delay(1200);
+  await new Promise(resolve => setTimeout(resolve, 1200));
   return [...mockAnalyticsData];
 };
 
 // Sitemap API
 export const regenerateSitemap = async (): Promise<void> => {
-  await delay(1500);
+  await new Promise(resolve => setTimeout(resolve, 1500));
   toast.success("Sitemap regenerated successfully");
 };
 
@@ -74,8 +218,22 @@ export interface InternalLink {
 }
 
 export const fetchInternalLinks = async (): Promise<InternalLink[]> => {
-  await delay(800);
-  return []; // Mock empty array for now
+  const { data, error } = await supabase
+    .from('internal_links')
+    .select('*');
+
+  if (error) {
+    console.error("Error fetching internal links:", error);
+    return [];
+  }
+
+  return data.map(link => ({
+    id: link.id,
+    sourcePageId: link.source_page_id,
+    targetPageId: link.target_page_id,
+    anchorText: link.anchor_text,
+    createdAt: link.created_at
+  }));
 };
 
 export const createInternalLink = async (
@@ -83,51 +241,85 @@ export const createInternalLink = async (
   targetPageId: string,
   anchorText: string
 ): Promise<InternalLink> => {
-  await delay(1000);
-  
-  const newLink: InternalLink = {
-    id: Math.random().toString(36).substring(2, 9),
-    sourcePageId,
-    targetPageId,
-    anchorText,
-    createdAt: new Date().toISOString()
-  };
+  const { data, error } = await supabase
+    .from('internal_links')
+    .insert({
+      source_page_id: sourcePageId,
+      target_page_id: targetPageId,
+      anchor_text: anchorText
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating internal link:", error);
+    throw error;
+  }
   
   toast.success("Internal link created successfully");
-  return newLink;
+  
+  return {
+    id: data.id,
+    sourcePageId: data.source_page_id,
+    targetPageId: data.target_page_id,
+    anchorText: data.anchor_text,
+    createdAt: data.created_at
+  };
 };
 
 export const deleteInternalLink = async (id: string): Promise<void> => {
-  await delay(800);
+  const { error } = await supabase
+    .from('internal_links')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error("Error deleting internal link:", error);
+    throw error;
+  }
+  
   toast.success("Internal link deleted successfully");
 };
 
 // Robots.txt API
 export const fetchRobotsContent = async (): Promise<string> => {
-  await delay(600);
   // This would typically fetch from a server endpoint
   return `User-agent: Googlebot\nAllow: /\n\nUser-agent: Bingbot\nAllow: /\n\nUser-agent: *\nAllow: /`;
 };
 
 export const updateRobotsContent = async (content: string): Promise<void> => {
-  await delay(1000);
   // This would typically update the server's robots.txt file
   toast.success("Robots.txt content updated successfully");
 };
 
 // Search functionality
 export async function searchPages(query: string): Promise<SeoPage[]> {
-  // In a real app, this would call an API endpoint
-  await new Promise((resolve) => setTimeout(resolve, 800)); // Simulate network delay
-  
-  // Filter mock data based on query
-  const lowercaseQuery = query.toLowerCase();
-  return mockSeoPages.filter((page) => 
-    page.title.toLowerCase().includes(lowercaseQuery) ||
-    page.slug.toLowerCase().includes(lowercaseQuery) ||
-    page.metaDescription?.toLowerCase().includes(lowercaseQuery) ||
-    page.keywords?.some((keyword) => keyword.toLowerCase().includes(lowercaseQuery))
-  );
+  const { data, error } = await supabase
+    .from('seo_pages')
+    .select('*')
+    .or(`title.ilike.%${query}%,slug.ilike.%${query}%,meta_description.ilike.%${query}%`)
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    console.error("Error searching pages:", error);
+    throw error;
+  }
+
+  return data.map(page => ({
+    id: page.id,
+    title: page.title,
+    slug: page.slug,
+    metaDescription: page.meta_description,
+    content: page.content,
+    keywords: page.keywords || [],
+    canonicalUrl: page.canonical_url,
+    robotsDirective: page.robots_directive,
+    publishStatus: page.publish_status,
+    templateId: page.template_id,
+    structuredData: page.structured_data,
+    createdAt: page.created_at,
+    updatedAt: page.updated_at
+  }));
 }
 
 // Multilingual SEO Support
@@ -154,61 +346,119 @@ export interface MultilingualSeoPageData {
 
 // Get multilingual data for a page
 export async function getPageMultilingualData(pageId: string): Promise<MultilingualSeoPageData | null> {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  
-  // Return mock data for demo purposes
-  const mockPage = mockSeoPages.find(page => page.id === pageId);
-  
-  if (!mockPage) return null;
+  // Fetch hreflang tags
+  const { data: hreflangData, error: hreflangError } = await supabase
+    .from('hreflang_tags')
+    .select('*')
+    .eq('page_id', pageId);
+
+  if (hreflangError) {
+    console.error("Error fetching hreflang tags:", hreflangError);
+    return null;
+  }
+
+  // Fetch multilingual content
+  const { data: contentData, error: contentError } = await supabase
+    .from('multilingual_content')
+    .select('*')
+    .eq('page_id', pageId);
+
+  if (contentError) {
+    console.error("Error fetching multilingual content:", contentError);
+    return null;
+  }
+
+  const hreflangs = hreflangData.map(tag => ({
+    locale: tag.locale,
+    url: tag.url
+  }));
+
+  const localizedContent = contentData.map(content => ({
+    locale: content.locale,
+    title: content.title,
+    metaDescription: content.meta_description || '',
+    content: content.content || ''
+  }));
+
+  // Extract all locales
+  const allLocales = Array.from(new Set([
+    ...hreflangs.map(tag => tag.locale),
+    ...localizedContent.map(content => content.locale)
+  ]));
+
+  // Assume first locale is default - in a real app this would be stored somewhere
+  const defaultLocale = allLocales[0] || 'en-US';
   
   return {
     id: `ml-${pageId}`,
     pageId,
-    defaultLocale: 'en-US',
-    alternateLocales: ['es-ES', 'fr-FR', 'de-DE'],
-    hreflangs: [
-      { locale: 'en-US', url: `https://example.com/${mockPage.slug}` },
-      { locale: 'es-ES', url: `https://example.com/es/${mockPage.slug}` },
-      { locale: 'fr-FR', url: `https://example.com/fr/${mockPage.slug}` },
-      { locale: 'de-DE', url: `https://example.com/de/${mockPage.slug}` },
-    ],
-    localizedContent: [
-      {
-        locale: 'en-US',
-        title: mockPage.title,
-        metaDescription: mockPage.metaDescription || '',
-        content: mockPage.content || '',
-      },
-      {
-        locale: 'es-ES',
-        title: `${mockPage.title} (Español)`,
-        metaDescription: mockPage.metaDescription ? `${mockPage.metaDescription} (Español)` : '',
-        content: mockPage.content ? `${mockPage.content} (Español)` : '',
-      },
-      {
-        locale: 'fr-FR',
-        title: `${mockPage.title} (Français)`,
-        metaDescription: mockPage.metaDescription ? `${mockPage.metaDescription} (Français)` : '',
-        content: mockPage.content ? `${mockPage.content} (Français)` : '',
-      },
-      {
-        locale: 'de-DE',
-        title: `${mockPage.title} (Deutsch)`,
-        metaDescription: mockPage.metaDescription ? `${mockPage.metaDescription} (Deutsch)` : '',
-        content: mockPage.content ? `${mockPage.content} (Deutsch)` : '',
-      },
-    ]
+    defaultLocale,
+    alternateLocales: allLocales.filter(locale => locale !== defaultLocale),
+    hreflangs,
+    localizedContent
   };
 }
 
 // Update multilingual data for a page
 export async function updatePageMultilingualData(data: MultilingualSeoPageData): Promise<MultilingualSeoPageData> {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 800));
+  // Start a transaction
+  const { error: transactionError } = await supabase.rpc('begin_transaction');
   
-  // In a real app, this would persist the data
-  console.log("Updating multilingual data:", data);
+  if (transactionError) {
+    console.error("Error starting transaction:", transactionError);
+    throw transactionError;
+  }
   
-  return data;
+  try {
+    // Delete existing hreflang tags
+    const { error: deleteHreflangError } = await supabase
+      .from('hreflang_tags')
+      .delete()
+      .eq('page_id', data.pageId);
+    
+    if (deleteHreflangError) throw deleteHreflangError;
+    
+    // Insert new hreflang tags
+    if (data.hreflangs.length > 0) {
+      const { error: insertHreflangError } = await supabase
+        .from('hreflang_tags')
+        .insert(data.hreflangs.map(tag => ({
+          page_id: data.pageId,
+          locale: tag.locale,
+          url: tag.url
+        })));
+      
+      if (insertHreflangError) throw insertHreflangError;
+    }
+    
+    // Update existing content or insert new content
+    for (const content of data.localizedContent) {
+      const { error: upsertContentError } = await supabase
+        .from('multilingual_content')
+        .upsert({
+          page_id: data.pageId,
+          locale: content.locale,
+          title: content.title,
+          meta_description: content.metaDescription,
+          content: content.content
+        }, {
+          onConflict: 'page_id,locale'
+        });
+      
+      if (upsertContentError) throw upsertContentError;
+    }
+    
+    // Commit transaction
+    const { error: commitError } = await supabase.rpc('commit_transaction');
+    if (commitError) throw commitError;
+    
+    toast.success("Multilingual data updated successfully");
+    return data;
+    
+  } catch (error) {
+    // Rollback transaction on error
+    await supabase.rpc('rollback_transaction');
+    console.error("Error updating multilingual data:", error);
+    throw error;
+  }
 }

@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   Table,
   TableBody,
@@ -17,27 +18,39 @@ import { Search, PlusSquare, BarChart4 } from "lucide-react";
 import { SeoPage } from "@/lib/mock-data";
 import { fetchSeoPages } from "@/lib/api";
 import { Card, CardContent } from "../ui/card";
+import { supabase } from "@/integrations/supabase/client";
 
 export function SeoPagesList() {
-  const [pages, setPages] = useState<SeoPage[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  useEffect(() => {
-    const loadPages = async () => {
-      try {
-        const data = await fetchSeoPages();
-        setPages(data);
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Failed to load SEO pages:", error);
-        setIsLoading(false);
-      }
-    };
+  const { data: pages = [], isLoading, refetch } = useQuery({
+    queryKey: ["seoPages"],
+    queryFn: fetchSeoPages,
+  });
 
-    loadPages();
-  }, []);
+  // Set up real-time subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('seo_pages_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen for all changes (insert, update, delete)
+          schema: 'public',
+          table: 'seo_pages',
+        },
+        () => {
+          // Refetch pages when any change occurs
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
