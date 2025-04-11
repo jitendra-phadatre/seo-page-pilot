@@ -84,19 +84,16 @@ export function Header({ toggleSidebar }: HeaderProps) {
         </Link>
       </div>
       <div className="relative flex-1">
-        <div className="flex items-center">
-          <span className="hidden md:block text-lg font-semibold mr-4">Traveazy SEO Tool</span>
-          <form onSubmit={handleSearch} className="flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="w-full appearance-none bg-background pl-8 md:w-2/3 lg:w-1/3"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </form>
-        </div>
+        <form onSubmit={handleSearch} className="flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search..."
+            className="w-full appearance-none bg-background pl-8 md:w-2/3 lg:w-1/3"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </form>
       </div>
       <div className="flex items-center gap-2">
         <NotificationMenu />
