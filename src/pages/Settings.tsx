@@ -13,7 +13,8 @@ import { useForm } from "react-hook-form";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FileCode, Globe, LucideCloud } from "lucide-react";
+import { FileCode, Globe, LucideCloud, Search } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 const deploymentSchema = z.object({
   awsRegion: z.string().min(1, "AWS Region is required"),
@@ -39,6 +40,19 @@ const globalSchema = z.object({
 });
 
 type GlobalSettings = z.infer<typeof globalSchema>;
+
+const seoSchema = z.object({
+  defaultTitle: z.string().min(5, "Title must be at least 5 characters"),
+  defaultMetaDescription: z.string().min(50, "Meta description should be at least 50 characters"),
+  titleSeparator: z.string().min(1, "Title separator is required"),
+  defaultKeywords: z.string(),
+  googleVerification: z.string(),
+  bingVerification: z.string(),
+  defaultRobotsDirective: z.string(),
+  generateSitemapAutomatically: z.boolean(),
+});
+
+type SeoSettings = z.infer<typeof seoSchema>;
 
 const Settings = () => {
   const [isSaving, setIsSaving] = useState(false);
@@ -70,9 +84,24 @@ const Settings = () => {
       timeZone: "UTC",
     },
   });
+
+  const seoForm = useForm<SeoSettings>({
+    resolver: zodResolver(seoSchema),
+    defaultValues: {
+      defaultTitle: "Traveazy Travel Destinations | Plan Your Dream Vacation",
+      defaultMetaDescription: "Discover amazing travel destinations with Traveazy. Find the best hotels, flights, and vacation packages for your dream getaway.",
+      titleSeparator: " | ",
+      defaultKeywords: "travel, vacation, hotels, flights, destinations, tourism, travel guide",
+      googleVerification: "",
+      bingVerification: "",
+      defaultRobotsDirective: "index,follow",
+      generateSitemapAutomatically: true,
+    },
+  });
   
   const handleDeploymentSubmit = (data: DeploymentSettings) => {
     setIsSaving(true);
+    // In a real application, this would save to a database
     setTimeout(() => {
       console.log("Deployment settings:", data);
       toast.success("Deployment settings saved successfully");
@@ -82,6 +111,7 @@ const Settings = () => {
   
   const handleNotificationSubmit = (data: NotificationSettings) => {
     setIsSaving(true);
+    // In a real application, this would save to a database
     setTimeout(() => {
       console.log("Notification settings:", data);
       toast.success("Notification settings saved successfully");
@@ -91,9 +121,20 @@ const Settings = () => {
   
   const handleGlobalSubmit = (data: GlobalSettings) => {
     setIsSaving(true);
+    // In a real application, this would save to a database
     setTimeout(() => {
       console.log("Global settings:", data);
       toast.success("Global settings saved successfully");
+      setIsSaving(false);
+    }, 1000);
+  };
+
+  const handleSeoSubmit = (data: SeoSettings) => {
+    setIsSaving(true);
+    // In a real application, this would save to a database
+    setTimeout(() => {
+      console.log("SEO settings:", data);
+      toast.success("SEO settings saved successfully");
       setIsSaving(false);
     }, 1000);
   };
@@ -111,6 +152,10 @@ const Settings = () => {
             <TabsTrigger value="general">
               <Globe className="mr-2 h-4 w-4" />
               General
+            </TabsTrigger>
+            <TabsTrigger value="seo">
+              <Search className="mr-2 h-4 w-4" />
+              SEO Configuration
             </TabsTrigger>
             <TabsTrigger value="notifications">
               <FileCode className="mr-2 h-4 w-4" />
@@ -186,6 +231,168 @@ const Settings = () => {
                     
                     <Button type="submit" disabled={isSaving}>
                       {isSaving ? "Saving..." : "Save settings"}
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="seo">
+            <Card>
+              <CardHeader>
+                <CardTitle>SEO Configuration</CardTitle>
+                <CardDescription>
+                  Configure default SEO settings for your website
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...seoForm}>
+                  <form onSubmit={seoForm.handleSubmit(handleSeoSubmit)} className="space-y-6">
+                    <FormField
+                      control={seoForm.control}
+                      name="defaultTitle"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Default Page Title</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            The default title used when no specific title is provided
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={seoForm.control}
+                      name="defaultMetaDescription"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Default Meta Description</FormLabel>
+                          <FormControl>
+                            <Textarea rows={3} {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            The default meta description used when no specific description is provided
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={seoForm.control}
+                      name="titleSeparator"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Title Separator</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder=" | " />
+                          </FormControl>
+                          <FormDescription>
+                            Character(s) used to separate parts of the title
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={seoForm.control}
+                      name="defaultKeywords"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Default Keywords</FormLabel>
+                          <FormControl>
+                            <Textarea rows={2} {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Default keywords separated by commas
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={seoForm.control}
+                        name="googleVerification"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Google Verification Code</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Google site verification code" />
+                            </FormControl>
+                            <FormDescription>
+                              For Google Search Console verification
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={seoForm.control}
+                        name="bingVerification"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Bing Verification Code</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Bing site verification code" />
+                            </FormControl>
+                            <FormDescription>
+                              For Bing Webmaster Tools verification
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={seoForm.control}
+                      name="defaultRobotsDirective"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Default Robots Directive</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="index,follow" />
+                          </FormControl>
+                          <FormDescription>
+                            Default robots directive for new pages
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={seoForm.control}
+                      name="generateSitemapAutomatically"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                          <div className="space-y-0.5">
+                            <FormLabel>Automatic Sitemap Generation</FormLabel>
+                            <FormDescription>
+                              Automatically generate sitemap.xml when pages are published
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button type="submit" disabled={isSaving}>
+                      {isSaving ? "Saving..." : "Save SEO configuration"}
                     </Button>
                   </form>
                 </Form>

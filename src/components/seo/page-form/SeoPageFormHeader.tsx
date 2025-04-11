@@ -7,13 +7,15 @@ interface SeoPageFormHeaderProps {
   isSaving: boolean;
   slug: string;
   handleDelete: () => void;
+  handlePreview: () => void;
 }
 
 export function SeoPageFormHeader({ 
   isNew, 
   isSaving, 
   slug, 
-  handleDelete 
+  handleDelete,
+  handlePreview
 }: SeoPageFormHeaderProps) {
   return (
     <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
@@ -37,7 +39,11 @@ export function SeoPageFormHeader({
             <Trash size={16} />
           </Button>
         )}
-        <Button type="button" variant="outline">
+        <Button 
+          type="button" 
+          variant="outline"
+          onClick={handlePreview}
+        >
           <Eye className="mr-2 h-4 w-4" />
           Preview
         </Button>
