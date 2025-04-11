@@ -48,6 +48,11 @@ const jsonToObject = <T>(json: Json | null): T | null => {
   return null;
 };
 
+// Helper function to convert object to Json type for Supabase
+const objectToJson = <T extends object>(obj: T): Json => {
+  return obj as unknown as Json;
+};
+
 // Default values
 const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
   siteUrl: "https://example.com",
@@ -174,7 +179,7 @@ export async function updateGeneralSettings(settings: GeneralSettings): Promise<
   try {
     const { error } = await supabase
       .from('app_settings')
-      .update({ value: settings })
+      .update({ value: objectToJson(settings) })
       .eq('key', 'general_settings');
 
     if (error) throw error;
@@ -192,7 +197,7 @@ export async function updateSeoSettings(settings: SeoSettings): Promise<SeoSetti
   try {
     const { error } = await supabase
       .from('app_settings')
-      .update({ value: settings })
+      .update({ value: objectToJson(settings) })
       .eq('key', 'seo_settings');
 
     if (error) throw error;
@@ -210,7 +215,7 @@ export async function updateNotificationSettings(settings: NotificationSettings)
   try {
     const { error } = await supabase
       .from('app_settings')
-      .update({ value: settings })
+      .update({ value: objectToJson(settings) })
       .eq('key', 'notification_settings');
 
     if (error) throw error;
@@ -228,7 +233,7 @@ export async function updateAnalyticsSettings(settings: AnalyticsSettings): Prom
   try {
     const { error } = await supabase
       .from('app_settings')
-      .update({ value: settings })
+      .update({ value: objectToJson(settings) })
       .eq('key', 'analytics_settings');
 
     if (error) throw error;
