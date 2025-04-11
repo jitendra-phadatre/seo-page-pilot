@@ -12,18 +12,22 @@ import { useForm } from "react-hook-form";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Globe, Search, FileCode } from "lucide-react";
+import { Globe, Search, Bell, LineChart } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { 
   getGeneralSettings, 
   getSeoSettings, 
   getNotificationSettings,
+  getAnalyticsSettings,
   updateGeneralSettings,
   updateSeoSettings,
   updateNotificationSettings,
-  GeneralSettings,
-  SeoSettings,
-  NotificationSettings
+  updateAnalyticsSettings,
+  connectGoogleSearchConsole,
+  GeneralSettings as GeneralSettingsType,
+  SeoSettings as SeoSettingsType,
+  NotificationSettings as NotificationSettingsType,
+  AnalyticsSettings as AnalyticsSettingsType
 } from "@/lib/settings-api";
 
 const notificationSchema = z.object({
@@ -33,7 +37,7 @@ const notificationSchema = z.object({
   securityAlertNotifications: z.boolean(),
 });
 
-type NotificationSettings = z.infer<typeof notificationSchema>;
+type NotificationFormValues = z.infer<typeof notificationSchema>;
 
 const globalSchema = z.object({
   siteUrl: z.string().url("Please enter a valid URL"),
@@ -41,7 +45,7 @@ const globalSchema = z.object({
   timeZone: z.string().min(1, "Timezone is required"),
 });
 
-type GlobalSettings = z.infer<typeof globalSchema>;
+type GlobalFormValues = z.infer<typeof globalSchema>;
 
 const seoSchema = z.object({
   defaultTitle: z.string().min(5, "Title must be at least 5 characters"),
@@ -54,13 +58,21 @@ const seoSchema = z.object({
   generateSitemapAutomatically: z.boolean(),
 });
 
-type SeoSettings = z.infer<typeof seoSchema>;
+type SeoFormValues = z.infer<typeof seoSchema>;
+
+const analyticsSchema = z.object({
+  googleSearchConsoleConnected: z.boolean(),
+  googleAnalyticsConnected: z.boolean(),
+});
+
+type AnalyticsFormValues = z.infer<typeof analyticsSchema>;
 
 const Settings = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [analyticsSettings, setAnalyticsSettings] = useState<AnalyticsSettingsType | null>(null);
   
-  const notificationForm = useForm<NotificationSettings>({
+  const notificationForm = useForm<NotificationFormValues>({
     resolver: zodResolver(notificationSchema),
     defaultValues: {
       emailNotifications: true,
@@ -70,7 +82,7 @@ const Settings = () => {
     },
   });
   
-  const globalForm = useForm<GlobalSettings>({
+  const globalForm = useForm<GlobalFormValues>({
     resolver: zodResolver(globalSchema),
     defaultValues: {
       siteUrl: "https://example.com",
@@ -79,7 +91,7 @@ const Settings = () => {
     },
   });
 
-  const seoForm = useForm<SeoSettings>({
+  const seoForm = useForm<SeoFormValues>({
     resolver: zodResolver(seoSchema),
     defaultValues: {
       defaultTitle: "Traveazy Travel Destinations | Plan Your Dream Vacation",
@@ -90,6 +102,14 @@ const Settings = () => {
       bingVerification: "",
       defaultRobotsDirective: "index,follow",
       generateSitemapAutomatically: true,
+    },
+  });
+  
+  const analyticsForm = useForm<AnalyticsFormValues>({
+    resolver: zodResolver(analyticsSchema),
+    defaultValues: {
+      googleSearchConsoleConnected: false,
+      googleAnalyticsConnected: false,
     },
   });
   
@@ -108,6 +128,14 @@ const Settings = () => {
         // Load notification settings
         const notificationSettings = await getNotificationSettings();
         notificationForm.reset(notificationSettings);
+        
+        // Load analytics settings
+        const analytics = await getAnalyticsSettings();
+        setAnalyticsSettings(analytics);
+        analyticsForm.reset({
+          googleSearchConsoleConnected: analytics.googleSearchConsoleConnected,
+          googleAnalyticsConnected: analytics.googleAnalyticsConnected,
+        });
       } catch (error) {
         console.error("Error loading settings:", error);
       } finally {
@@ -116,12 +144,18 @@ const Settings = () => {
     }
     
     loadSettings();
-  }, [globalForm, seoForm, notificationForm]);
+  }, [globalForm, seoForm, notificationForm, analyticsForm]);
   
-  const handleNotificationSubmit = async (data: NotificationSettings) => {
+  const handleNotificationSubmit = async (data: NotificationFormValues) => {
     setIsSaving(true);
     try {
-      await updateNotificationSettings(data);
+      const settings: NotificationSettingsType = {
+        emailNotifications: data.emailNotifications,
+        pagePublishNotifications: data.pagePublishNotifications,
+        analyticsReportNotifications: data.analyticsReportNotifications,
+        securityAlertNotifications: data.securityAlertNotifications,
+      };
+      await updateNotificationSettings(settings);
     } catch (error) {
       console.error("Error saving notification settings:", error);
     } finally {
@@ -129,10 +163,15 @@ const Settings = () => {
     }
   };
   
-  const handleGlobalSubmit = async (data: GlobalSettings) => {
+  const handleGlobalSubmit = async (data: GlobalFormValues) => {
     setIsSaving(true);
     try {
-      await updateGeneralSettings(data);
+      const settings: GeneralSettingsType = {
+        siteUrl: data.siteUrl,
+        defaultLanguage: data.defaultLanguage,
+        timeZone: data.timeZone,
+      };
+      await updateGeneralSettings(settings);
     } catch (error) {
       console.error("Error saving global settings:", error);
     } finally {
@@ -140,15 +179,43 @@ const Settings = () => {
     }
   };
 
-  const handleSeoSubmit = async (data: SeoSettings) => {
+  const handleSeoSubmit = async (data: SeoFormValues) => {
     setIsSaving(true);
     try {
-      await updateSeoSettings(data);
+      const settings: SeoSettingsType = {
+        defaultTitle: data.defaultTitle,
+        defaultMetaDescription: data.defaultMetaDescription,
+        titleSeparator: data.titleSeparator,
+        defaultKeywords: data.defaultKeywords,
+        googleVerification: data.googleVerification,
+        bingVerification: data.bingVerification,
+        defaultRobotsDirective: data.defaultRobotsDirective,
+        generateSitemapAutomatically: data.generateSitemapAutomatically,
+      };
+      await updateSeoSettings(settings);
     } catch (error) {
       console.error("Error saving SEO settings:", error);
     } finally {
       setIsSaving(false);
     }
+  };
+  
+  const handleConnectGoogleConsole = async () => {
+    setIsSaving(true);
+    try {
+      const updatedSettings = await connectGoogleSearchConsole();
+      setAnalyticsSettings(updatedSettings);
+      analyticsForm.setValue('googleSearchConsoleConnected', true);
+    } catch (error) {
+      console.error("Error connecting to Google Search Console:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Never';
+    return new Date(dateString).toLocaleString();
   };
 
   if (isLoading) {
@@ -186,8 +253,12 @@ const Settings = () => {
               SEO Configuration
             </TabsTrigger>
             <TabsTrigger value="notifications">
-              <FileCode className="mr-2 h-4 w-4" />
+              <Bell className="mr-2 h-4 w-4" />
               Notifications
+            </TabsTrigger>
+            <TabsTrigger value="analytics">
+              <LineChart className="mr-2 h-4 w-4" />
+              Analytics
             </TabsTrigger>
           </TabsList>
           
@@ -524,6 +595,76 @@ const Settings = () => {
                     </Button>
                   </form>
                 </Form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="analytics">
+            <Card>
+              <CardHeader>
+                <CardTitle>Analytics Integrations</CardTitle>
+                <CardDescription>
+                  Connect and manage your analytics platforms
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="rounded-lg border p-4 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-medium">Google Search Console</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Connect to Google Search Console to view search performance data
+                      </p>
+                    </div>
+                    <div>
+                      {analyticsSettings?.googleSearchConsoleConnected ? (
+                        <div className="flex flex-col items-end">
+                          <span className="text-sm font-medium text-green-600 flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Connected
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Last sync: {formatDate(analyticsSettings?.lastSyncDate)}
+                          </span>
+                        </div>
+                      ) : (
+                        <Button onClick={handleConnectGoogleConsole} disabled={isSaving}>
+                          {isSaving ? "Connecting..." : "Connect"}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="rounded-lg border p-4 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-medium">Google Analytics</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Connect to Google Analytics to view website traffic data
+                      </p>
+                    </div>
+                    <div>
+                      {analyticsSettings?.googleAnalyticsConnected ? (
+                        <div className="flex flex-col items-end">
+                          <span className="text-sm font-medium text-green-600 flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Connected
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Last sync: {formatDate(analyticsSettings?.lastSyncDate)}
+                          </span>
+                        </div>
+                      ) : (
+                        <Button>Connect</Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

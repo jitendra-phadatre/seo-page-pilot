@@ -33,9 +33,10 @@ export interface AnalyticsSettings {
   lastSyncDate: string | null;
 }
 
+// Helper function to safely convert JSON to typed object
 const jsonToObject = <T>(json: Json | null): T | null => {
   if (json === null) return null;
-  if (typeof json === 'object') return json as T;
+  if (typeof json === 'object') return json as unknown as T;
   if (typeof json === 'string') {
     try {
       return JSON.parse(json) as T;
@@ -47,29 +48,59 @@ const jsonToObject = <T>(json: Json | null): T | null => {
   return null;
 };
 
+// Default values
+const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
+  siteUrl: "https://example.com",
+  defaultLanguage: "en-US",
+  timeZone: "UTC",
+};
+
+const DEFAULT_SEO_SETTINGS: SeoSettings = {
+  defaultTitle: "Traveazy Travel Destinations | Plan Your Dream Vacation",
+  defaultMetaDescription: "Discover amazing travel destinations with Traveazy. Find the best hotels, flights, and vacation packages for your dream getaway.",
+  titleSeparator: " | ",
+  defaultKeywords: "travel, vacation, hotels, flights, destinations, tourism, travel guide",
+  googleVerification: "",
+  bingVerification: "",
+  defaultRobotsDirective: "index,follow",
+  generateSitemapAutomatically: true,
+};
+
+const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
+  emailNotifications: true,
+  pagePublishNotifications: true,
+  analyticsReportNotifications: true,
+  securityAlertNotifications: true,
+};
+
+const DEFAULT_ANALYTICS_SETTINGS: AnalyticsSettings = {
+  googleSearchConsoleConnected: false,
+  googleAnalyticsConnected: false,
+  lastSyncDate: null,
+};
+
 export async function getGeneralSettings(): Promise<GeneralSettings> {
   try {
+    // Explicitly type for better TypeScript support
     const { data, error } = await supabase
       .from('app_settings')
-      .select('value')
+      .select('*')
       .eq('key', 'general_settings')
       .single();
 
     if (error) throw error;
 
-    const settings = jsonToObject<GeneralSettings>(data.value);
-    return settings || {
-      siteUrl: "https://example.com",
-      defaultLanguage: "en-US",
-      timeZone: "UTC",
-    };
+    // Safely access and parse the value field
+    if (data && data.value) {
+      const settings = jsonToObject<GeneralSettings>(data.value);
+      if (settings) return settings;
+    }
+    
+    // Return default if we couldn't get valid data
+    return DEFAULT_GENERAL_SETTINGS;
   } catch (error) {
     console.error("Error fetching general settings:", error);
-    return {
-      siteUrl: "https://example.com",
-      defaultLanguage: "en-US",
-      timeZone: "UTC",
-    };
+    return DEFAULT_GENERAL_SETTINGS;
   }
 }
 
@@ -77,35 +108,21 @@ export async function getSeoSettings(): Promise<SeoSettings> {
   try {
     const { data, error } = await supabase
       .from('app_settings')
-      .select('value')
+      .select('*')
       .eq('key', 'seo_settings')
       .single();
 
     if (error) throw error;
 
-    const settings = jsonToObject<SeoSettings>(data.value);
-    return settings || {
-      defaultTitle: "Traveazy Travel Destinations | Plan Your Dream Vacation",
-      defaultMetaDescription: "Discover amazing travel destinations with Traveazy. Find the best hotels, flights, and vacation packages for your dream getaway.",
-      titleSeparator: " | ",
-      defaultKeywords: "travel, vacation, hotels, flights, destinations, tourism, travel guide",
-      googleVerification: "",
-      bingVerification: "",
-      defaultRobotsDirective: "index,follow",
-      generateSitemapAutomatically: true,
-    };
+    if (data && data.value) {
+      const settings = jsonToObject<SeoSettings>(data.value);
+      if (settings) return settings;
+    }
+    
+    return DEFAULT_SEO_SETTINGS;
   } catch (error) {
     console.error("Error fetching SEO settings:", error);
-    return {
-      defaultTitle: "Traveazy Travel Destinations | Plan Your Dream Vacation",
-      defaultMetaDescription: "Discover amazing travel destinations with Traveazy. Find the best hotels, flights, and vacation packages for your dream getaway.",
-      titleSeparator: " | ",
-      defaultKeywords: "travel, vacation, hotels, flights, destinations, tourism, travel guide",
-      googleVerification: "",
-      bingVerification: "",
-      defaultRobotsDirective: "index,follow",
-      generateSitemapAutomatically: true,
-    };
+    return DEFAULT_SEO_SETTINGS;
   }
 }
 
@@ -113,27 +130,21 @@ export async function getNotificationSettings(): Promise<NotificationSettings> {
   try {
     const { data, error } = await supabase
       .from('app_settings')
-      .select('value')
+      .select('*')
       .eq('key', 'notification_settings')
       .single();
 
     if (error) throw error;
 
-    const settings = jsonToObject<NotificationSettings>(data.value);
-    return settings || {
-      emailNotifications: true,
-      pagePublishNotifications: true,
-      analyticsReportNotifications: true,
-      securityAlertNotifications: true,
-    };
+    if (data && data.value) {
+      const settings = jsonToObject<NotificationSettings>(data.value);
+      if (settings) return settings;
+    }
+    
+    return DEFAULT_NOTIFICATION_SETTINGS;
   } catch (error) {
     console.error("Error fetching notification settings:", error);
-    return {
-      emailNotifications: true,
-      pagePublishNotifications: true,
-      analyticsReportNotifications: true,
-      securityAlertNotifications: true,
-    };
+    return DEFAULT_NOTIFICATION_SETTINGS;
   }
 }
 
@@ -141,25 +152,21 @@ export async function getAnalyticsSettings(): Promise<AnalyticsSettings> {
   try {
     const { data, error } = await supabase
       .from('app_settings')
-      .select('value')
+      .select('*')
       .eq('key', 'analytics_settings')
       .single();
 
     if (error) throw error;
 
-    const settings = jsonToObject<AnalyticsSettings>(data.value);
-    return settings || {
-      googleSearchConsoleConnected: false,
-      googleAnalyticsConnected: false,
-      lastSyncDate: null,
-    };
+    if (data && data.value) {
+      const settings = jsonToObject<AnalyticsSettings>(data.value);
+      if (settings) return settings;
+    }
+    
+    return DEFAULT_ANALYTICS_SETTINGS;
   } catch (error) {
     console.error("Error fetching analytics settings:", error);
-    return {
-      googleSearchConsoleConnected: false,
-      googleAnalyticsConnected: false,
-      lastSyncDate: null,
-    };
+    return DEFAULT_ANALYTICS_SETTINGS;
   }
 }
 
@@ -167,7 +174,7 @@ export async function updateGeneralSettings(settings: GeneralSettings): Promise<
   try {
     const { error } = await supabase
       .from('app_settings')
-      .update({ value: settings as unknown as Json })
+      .update({ value: settings })
       .eq('key', 'general_settings');
 
     if (error) throw error;
@@ -185,7 +192,7 @@ export async function updateSeoSettings(settings: SeoSettings): Promise<SeoSetti
   try {
     const { error } = await supabase
       .from('app_settings')
-      .update({ value: settings as unknown as Json })
+      .update({ value: settings })
       .eq('key', 'seo_settings');
 
     if (error) throw error;
@@ -203,7 +210,7 @@ export async function updateNotificationSettings(settings: NotificationSettings)
   try {
     const { error } = await supabase
       .from('app_settings')
-      .update({ value: settings as unknown as Json })
+      .update({ value: settings })
       .eq('key', 'notification_settings');
 
     if (error) throw error;
@@ -221,7 +228,7 @@ export async function updateAnalyticsSettings(settings: AnalyticsSettings): Prom
   try {
     const { error } = await supabase
       .from('app_settings')
-      .update({ value: settings as unknown as Json })
+      .update({ value: settings })
       .eq('key', 'analytics_settings');
 
     if (error) throw error;
