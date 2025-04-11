@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,21 +8,23 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FileCode, Globe, LucideCloud, Search } from "lucide-react";
+import { Globe, Search, FileCode } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-
-const deploymentSchema = z.object({
-  awsRegion: z.string().min(1, "AWS Region is required"),
-  lambdaMemory: z.coerce.number().int().min(128).max(10240),
-  lambdaTimeout: z.coerce.number().int().min(1).max(900),
-});
-
-type DeploymentSettings = z.infer<typeof deploymentSchema>;
+import { 
+  getGeneralSettings, 
+  getSeoSettings, 
+  getNotificationSettings,
+  updateGeneralSettings,
+  updateSeoSettings,
+  updateNotificationSettings,
+  GeneralSettings,
+  SeoSettings,
+  NotificationSettings
+} from "@/lib/settings-api";
 
 const notificationSchema = z.object({
   emailNotifications: z.boolean(),
@@ -56,15 +58,7 @@ type SeoSettings = z.infer<typeof seoSchema>;
 
 const Settings = () => {
   const [isSaving, setIsSaving] = useState(false);
-  
-  const deploymentForm = useForm<DeploymentSettings>({
-    resolver: zodResolver(deploymentSchema),
-    defaultValues: {
-      awsRegion: "us-east-1",
-      lambdaMemory: 512,
-      lambdaTimeout: 30,
-    },
-  });
+  const [isLoading, setIsLoading] = useState(true);
   
   const notificationForm = useForm<NotificationSettings>({
     resolver: zodResolver(notificationSchema),
@@ -99,45 +93,79 @@ const Settings = () => {
     },
   });
   
-  const handleDeploymentSubmit = (data: DeploymentSettings) => {
+  useEffect(() => {
+    async function loadSettings() {
+      setIsLoading(true);
+      try {
+        // Load general settings
+        const generalSettings = await getGeneralSettings();
+        globalForm.reset(generalSettings);
+        
+        // Load SEO settings
+        const seoSettings = await getSeoSettings();
+        seoForm.reset(seoSettings);
+        
+        // Load notification settings
+        const notificationSettings = await getNotificationSettings();
+        notificationForm.reset(notificationSettings);
+      } catch (error) {
+        console.error("Error loading settings:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    loadSettings();
+  }, [globalForm, seoForm, notificationForm]);
+  
+  const handleNotificationSubmit = async (data: NotificationSettings) => {
     setIsSaving(true);
-    // In a real application, this would save to a database
-    setTimeout(() => {
-      console.log("Deployment settings:", data);
-      toast.success("Deployment settings saved successfully");
+    try {
+      await updateNotificationSettings(data);
+    } catch (error) {
+      console.error("Error saving notification settings:", error);
+    } finally {
       setIsSaving(false);
-    }, 1000);
+    }
   };
   
-  const handleNotificationSubmit = (data: NotificationSettings) => {
+  const handleGlobalSubmit = async (data: GlobalSettings) => {
     setIsSaving(true);
-    // In a real application, this would save to a database
-    setTimeout(() => {
-      console.log("Notification settings:", data);
-      toast.success("Notification settings saved successfully");
+    try {
+      await updateGeneralSettings(data);
+    } catch (error) {
+      console.error("Error saving global settings:", error);
+    } finally {
       setIsSaving(false);
-    }, 1000);
-  };
-  
-  const handleGlobalSubmit = (data: GlobalSettings) => {
-    setIsSaving(true);
-    // In a real application, this would save to a database
-    setTimeout(() => {
-      console.log("Global settings:", data);
-      toast.success("Global settings saved successfully");
-      setIsSaving(false);
-    }, 1000);
+    }
   };
 
-  const handleSeoSubmit = (data: SeoSettings) => {
+  const handleSeoSubmit = async (data: SeoSettings) => {
     setIsSaving(true);
-    // In a real application, this would save to a database
-    setTimeout(() => {
-      console.log("SEO settings:", data);
-      toast.success("SEO settings saved successfully");
+    try {
+      await updateSeoSettings(data);
+    } catch (error) {
+      console.error("Error saving SEO settings:", error);
+    } finally {
       setIsSaving(false);
-    }, 1000);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="content-area">
+          <div className="mb-6">
+            <h1 className="page-title">Settings</h1>
+            <p className="page-subtitle">Loading settings...</p>
+          </div>
+          <div className="flex items-center justify-center p-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -160,10 +188,6 @@ const Settings = () => {
             <TabsTrigger value="notifications">
               <FileCode className="mr-2 h-4 w-4" />
               Notifications
-            </TabsTrigger>
-            <TabsTrigger value="deployment">
-              <LucideCloud className="mr-2 h-4 w-4" />
-              AWS Deployment
             </TabsTrigger>
           </TabsList>
           
@@ -498,87 +522,6 @@ const Settings = () => {
                     <Button type="submit" disabled={isSaving}>
                       {isSaving ? "Saving..." : "Save preferences"}
                     </Button>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="deployment">
-            <Card>
-              <CardHeader>
-                <CardTitle>AWS Lambda Deployment</CardTitle>
-                <CardDescription>
-                  Configure settings for deploying to AWS Lambda
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Form {...deploymentForm}>
-                  <form onSubmit={deploymentForm.handleSubmit(handleDeploymentSubmit)} className="space-y-6">
-                    <FormField
-                      control={deploymentForm.control}
-                      name="awsRegion"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>AWS Region</FormLabel>
-                          <FormControl>
-                            <Input placeholder="us-east-1" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            The AWS region to deploy your application
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={deploymentForm.control}
-                      name="lambdaMemory"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Lambda Memory (MB)</FormLabel>
-                          <FormControl>
-                            <Input type="number" {...field} min={128} max={10240} step={128} />
-                          </FormControl>
-                          <FormDescription>
-                            Memory allocation for the Lambda function (128-10240 MB)
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={deploymentForm.control}
-                      name="lambdaTimeout"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Lambda Timeout (seconds)</FormLabel>
-                          <FormControl>
-                            <Input type="number" {...field} min={1} max={900} />
-                          </FormControl>
-                          <FormDescription>
-                            Function timeout in seconds (1-900)
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <Separator className="my-4" />
-                    
-                    <div className="flex items-center gap-2">
-                      <Button type="submit" disabled={isSaving}>
-                        {isSaving ? "Saving..." : "Save deployment settings"}
-                      </Button>
-                      <Button type="button" variant="outline">
-                        Test Configuration
-                      </Button>
-                      <Button type="button" variant="destructive">
-                        Deploy to AWS
-                      </Button>
-                    </div>
                   </form>
                 </Form>
               </CardContent>
