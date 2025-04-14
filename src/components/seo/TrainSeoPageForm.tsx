@@ -127,7 +127,7 @@ export function TrainSeoPageForm() {
       metaDescription: `Book your train from ${fromLocation} to ${toLocation}. Journey time: ${duration}, distance: ${distance}. Easy online booking with best prices guaranteed.`,
       content,
       keywords: [`${fromLocation} to ${toLocation} train`, `${toLocation} train ticket`, `book train ${fromLocation}`, `${fromLocation} ${toLocation} transport`],
-      publishStatus: "published",
+      publishStatus: "published" as "published" | "draft" | "archived", // Type assertion to fix the error
       structuredData,
       // Adding the missing required properties
       canonicalUrl: null,
