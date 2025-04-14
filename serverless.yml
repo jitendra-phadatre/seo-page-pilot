@@ -4,14 +4,68 @@ service: seo-management-app
 provider:
   name: aws
   runtime: nodejs16.x
+  architecture: arm64
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
-  memorySize: 512
-  timeout: 10
-  logRetentionInDays: 14
+  memorySize: 2048
+  timeout: 900
+  logRetentionInDays: 1
+  vpc:
+    securityGroupIds:
+      - ${self:custom.securityGroupIds.${self:provider.stage}}
+    subnetIds: ${self:custom.subnetIds.${self:provider.stage}}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:*
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - secretsmanager:GetSecretValue
+          Resource: "*"
+  environment:
+    NODE_ENV: production
+    STAGE: ${self:provider.stage}
+    JS_VERSION: ${opt:jsVersion, '1.0.0'}
+    MAX_AJAX_RETRIES: 2
+    DATE_FORMAT: yyyy-MM-dd
+    DEBUG_MODE: off
+    # Additional environment variables as needed
+    
+custom:
+  securityGroupIds:
+    dev: sg-09369536aaa122537
+    qa: sg-07070524589589625
+    stage: sg-0d862bf2e1912ad0f
+    prod: sg-0d862bf2e1912ad0f
+  subnetIds:
+    dev: 
+      - subnet-03d88cd092be1469d
+      - subnet-080ebc41f32dc9a85
+      - subnet-018b5c6d09403d884
+    qa:
+      - subnet-0f1e532cf2efa30e6
+      - subnet-05047ab53b26b6459
+      - subnet-0cd6e2033a0e94c79
+    stage:
+      - subnet-0d1c318f18545454b
+      - subnet-01a410c8881bbbe4d
+      - subnet-0ebdfddee146f0f06
+    prod:
+      - subnet-0d1c318f18545454b
+      - subnet-01a410c8881bbbe4d
+      - subnet-0ebdfddee146f0f06
+  s3Buckets:
+    dev: vsts-dev-lambda-drop
+    qa: vsts-dev-lambda-drop
+    stage: vsts-dev-lambda-drop-mumbai
+    prod: vsts-dev-lambda-drop-mumbai
   
 functions:
   app:
+    name: ${self:provider.stage}-seo-management-app
     handler: index.handler
     events:
       - http:
@@ -19,9 +73,10 @@ functions:
           method: GET
       - http:
           path: /{proxy+}
-          method: GET
-    environment:
-      NODE_ENV: production
+          method: ANY
+    tags:
+      LOB: TRAVEAZY
+      PRODUCT: SEO
 
 package:
   patterns:

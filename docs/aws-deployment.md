@@ -28,8 +28,10 @@ The Serverless Framework provides a simple way to deploy Lambda functions with a
 
 3. **Run deploy script**:
    ```
-   ./deploy.sh
+   ./deploy.sh [environment]
    ```
+
+   Where `[environment]` is one of: `dev`, `qa`, `stage`, `prod`
 
 ### Option 2: Manual Deployment
 
@@ -49,6 +51,7 @@ Your Lambda package should have the following structure:
 │   ├── static/
 │   └── ...
 ├── index.js        # The Lambda handler
+├── serverless.yml  # Serverless configuration
 └── node_modules/   # Only production dependencies
 ```
 
@@ -70,6 +73,7 @@ zip -r deployment.zip index.js dist node_modules
 aws lambda create-function \
   --function-name seo-management-app \
   --runtime nodejs16.x \
+  --architecture arm64 \
   --role arn:aws:iam::ACCOUNT_ID:role/lambda-execution-role \
   --handler index.handler \
   --zip-file fileb://deployment.zip
@@ -80,21 +84,45 @@ aws lambda update-function-code \
   --zip-file fileb://deployment.zip
 ```
 
-#### 5. Configure API Gateway
-
-1. Create a new API Gateway REST API
-2. Create a proxy resource with `{proxy+}` path
-3. Set up the ANY method and integrate with your Lambda function
-4. Deploy the API to a stage
-
 ## Environment Variables
 
-For both deployment options, you should set these environment variables in the Lambda function:
+These environment variables are configured in the serverless.yml file or can be set directly in the Lambda function:
 
-- `SUPABASE_URL`: Your Supabase project URL
-- `SUPABASE_KEY`: Your Supabase project API key
+- `STAGE`: Deployment environment (dev, qa, stage, prod)
+- `JS_VERSION`: Build version identifier
+- `MAX_AJAX_RETRIES`: Number of API request retries
+- `DATE_FORMAT`: Standard date format
+- `DEBUG_MODE`: Enable/disable debug mode
+- `ALLOWED_SCRIPT_SRC`: CSP script-src directive
+- `ALLOWED_CONNECT_SRC`: CSP connect-src directive
+- `ALLOWED_IMG_SRC`: CSP img-src directive
+- `ALLOWED_FRAME_SRC`: CSP frame-src directive
+- `ALLOWED_OBJECT_SRC`: CSP object-src directive
+- `ALLOWED_STYLE_SRC`: CSP style-src directive
+- `ALLOWED_FONT_SRC`: CSP font-src directive
 
-## Continuous Integration/Deployment
+## VPC Configuration
+
+This application is configured to run within a VPC for enhanced security. The specific security groups and subnets are defined in the `serverless.yml` file for each environment.
+
+## Security Headers
+
+The application implements the following security headers:
+
+- Content-Security-Policy (CSP)
+- X-Content-Type-Options
+- X-Frame-Options
+- X-XSS-Protection
+- Strict-Transport-Security
+- Referrer-Policy
+
+## Monitoring and Troubleshooting
+
+- **CloudWatch Logs**: Monitor Lambda execution logs
+- **CloudWatch Metrics**: Track invocation count, duration, and errors
+- **X-Ray**: Enable tracing for request analysis (optional)
+
+## CI/CD Integration
 
 For CI/CD, you can use GitHub Actions or AWS CodePipeline to automate the build and deployment process.
 
@@ -129,30 +157,8 @@ jobs:
         run: npm run build
         
       - name: Deploy with Serverless Framework
-        run: npx serverless deploy --stage prod
+        run: npx serverless deploy --stage prod --jsVersion $(date +%Y%m%d%H%M%S)
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
 ```
-
-## Performance Optimization
-
-To optimize performance:
-
-1. **Caching**: Add appropriate cache headers in the Lambda response
-2. **Compression**: Enable GZIP/Brotli compression at API Gateway level
-3. **Memory**: Increase Lambda memory (which also increases CPU) for faster response times
-
-## Monitoring and Troubleshooting
-
-- **CloudWatch Logs**: Monitor Lambda execution logs
-- **CloudWatch Metrics**: Track invocation count, duration, and errors
-- **X-Ray**: Enable tracing for request analysis (optional)
-
-## Cost Considerations
-
-- Lambda is charged by invocation count and duration
-- API Gateway is charged by request count
-- Set up budget alerts to monitor costs

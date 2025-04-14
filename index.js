@@ -22,6 +22,26 @@ const mimeTypes = {
   '.otf': 'font/otf'
 };
 
+// Add security headers based on environment variables
+const getSecurityHeaders = () => {
+  const scriptSrc = process.env.ALLOWED_SCRIPT_SRC || '';
+  const connectSrc = process.env.ALLOWED_CONNECT_SRC || '';
+  const imgSrc = process.env.ALLOWED_IMG_SRC || '';
+  const frameSrc = process.env.ALLOWED_FRAME_SRC || '';
+  const objectSrc = process.env.ALLOWED_OBJECT_SRC || '';
+  const styleSrc = process.env.ALLOWED_STYLE_SRC || '';
+  const fontSrc = process.env.ALLOWED_FONT_SRC || '';
+  
+  return {
+    'Content-Security-Policy': `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' ${scriptSrc}; connect-src 'self' ${connectSrc}; img-src 'self' data: ${imgSrc}; frame-src 'self' ${frameSrc}; object-src 'self' ${objectSrc}; style-src 'self' 'unsafe-inline' ${styleSrc}; font-src 'self' ${fontSrc};`,
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'SAMEORIGIN',
+    'X-XSS-Protection': '1; mode=block',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
+  };
+};
+
 exports.handler = async (event, context) => {
   try {
     // For API Gateway integration, the path is available in rawPath
@@ -55,12 +75,23 @@ exports.handler = async (event, context) => {
     const ext = path.extname(fullPath);
     const contentType = mimeTypes[ext] || 'application/octet-stream';
     
+    // Set appropriate cache control based on file type
+    const cacheControl = ext === '.html' ? 'no-cache' : 'max-age=31536000';
+    
+    // Get security headers
+    const securityHeaders = getSecurityHeaders();
+    
     // Return the response
     return {
       statusCode: 200,
       headers: {
         'Content-Type': contentType,
-        'Cache-Control': ext === '.html' ? 'no-cache' : 'max-age=31536000',
+        'Cache-Control': cacheControl,
+        ...securityHeaders,
+        // Add CORS headers if needed
+        'Access-Control-Allow-Origin': process.env.ALLOW_CORSORIGIN || '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
       },
       body: fileContents.toString('base64'),
       isBase64Encoded: true,
