@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Search, Train } from "lucide-react";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -82,12 +82,7 @@ export function Header({ toggleSidebar }: HeaderProps) {
           </svg>
           <span className="font-bold">Traveazy SEO Tool</span>
         </Link>
-        <div className="flex items-center ml-6">
-          <Link to="/train-booking" className="flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
-            <Train className="h-4 w-4 mr-1" />
-            Train Booking
-          </Link>
-        </div>
+        {/* Train Booking link has been removed */}
       </div>
       <div className="relative flex-1">
         <form onSubmit={handleSearch} className="flex-1">
