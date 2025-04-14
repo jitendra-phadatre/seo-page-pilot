@@ -128,7 +128,11 @@ export function TrainSeoPageForm() {
       content,
       keywords: [`${fromLocation} to ${toLocation} train`, `${toLocation} train ticket`, `book train ${fromLocation}`, `${fromLocation} ${toLocation} transport`],
       publishStatus: "published",
-      structuredData
+      structuredData,
+      // Adding the missing required properties
+      canonicalUrl: null,
+      robotsDirective: "index,follow",
+      templateId: null
     };
     
     try {
