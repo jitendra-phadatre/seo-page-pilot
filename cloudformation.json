@@ -1,0 +1,443 @@
+
+{
+  "Description": "SEO Management App Lambda",
+  "Parameters": {
+    "BuildPath": {
+      "MinLength": "0",
+      "Type": "String",
+      "Description": "Path of S3 Object uploaded after build is completed"
+    },
+    "Environment": {
+      "AllowedValues": [
+        "dev",
+        "qa",
+        "stage",
+        "prod"
+      ],
+      "Default": "dev",
+      "Description": "What environment is this?",
+      "Type": "String"
+    },
+    "JsVersion": {
+      "MinLength": "0",
+      "Type": "String",
+      "Description": "build Number"
+    }
+  },
+  "Mappings": {
+    "S3BucketMapping": {
+      "dev": {
+        "Value": "vsts-dev-lambda-drop"
+      },
+      "qa": {
+        "Value": "vsts-dev-lambda-drop"
+      },
+      "stage": {
+        "Value": "vsts-dev-lambda-drop-mumbai"
+      },
+      "prod": {
+        "Value": "vsts-dev-lambda-drop-mumbai"
+      }
+    },
+    "SecurityGroupIdsMapping": {
+      "dev": {
+        "Value": [
+          "sg-09369536aaa122537"
+        ]
+      },
+      "qa": {
+        "Value": [
+          "sg-07070524589589625"
+        ]
+      },
+      "stage": {
+        "Value": [
+          "sg-0d862bf2e1912ad0f"
+        ]
+      },
+      "prod": {
+        "Value": [
+          "sg-0d862bf2e1912ad0f"
+        ]
+      }
+    },
+    "SubnetIdsMapping": {
+      "dev": {
+        "Value": [
+          "subnet-03d88cd092be1469d",
+          "subnet-080ebc41f32dc9a85",
+          "subnet-018b5c6d09403d884"
+        ]
+      },
+      "qa": {
+        "Value": [
+          "subnet-0f1e532cf2efa30e6",
+          "subnet-05047ab53b26b6459",
+          "subnet-0cd6e2033a0e94c79"
+        ]
+      },
+      "stage": {
+        "Value": [
+          "subnet-0d1c318f18545454b",
+          "subnet-01a410c8881bbbe4d",
+          "subnet-0ebdfddee146f0f06"
+        ]
+      },
+      "prod": {
+        "Value": [
+          "subnet-0d1c318f18545454b",
+          "subnet-01a410c8881bbbe4d",
+          "subnet-0ebdfddee146f0f06"
+        ]
+      }
+    },
+    "AllowedScriptSrc": {
+      "dev": {
+        "Value": "*.googleapis.com"
+      },
+      "qa": {
+        "Value": "*.googleapis.com"
+      },
+      "stage": {
+        "Value": "*.googleapis.com"
+      },
+      "prod": {
+        "Value": "*.googleapis.com"
+      }
+    },
+    "AllowedConnectSrc": {
+      "dev": {
+        "Value": "*.googleapis.com"
+      },
+      "qa": {
+        "Value": "*.googleapis.com"
+      },
+      "stage": {
+        "Value": "*.googleapis.com"
+      },
+      "prod": {
+        "Value": "*.googleapis.com"
+      }
+    },
+    "AllowedImgSrc": {
+      "dev": {
+        "Value": ""
+      },
+      "qa": {
+        "Value": ""
+      },
+      "stage": {
+        "Value": ""
+      },
+      "prod": {
+        "Value": ""
+      }
+    },
+    "AllowedFrameSrc": {
+      "dev": {
+        "Value": ""
+      },
+      "qa": {
+        "Value": ""
+      },
+      "stage": {
+        "Value": ""
+      },
+      "prod": {
+        "Value": ""
+      }
+    },
+    "AllowedObjectSrc": {
+      "dev": {
+        "Value": ""
+      },
+      "qa": {
+        "Value": ""
+      },
+      "stage": {
+        "Value": ""
+      },
+      "prod": {
+        "Value": ""
+      }
+    },
+    "AllowedStyleSrc": {
+      "dev": {
+        "Value": ""
+      },
+      "qa": {
+        "Value": ""
+      },
+      "stage": {
+        "Value": ""
+      },
+      "prod": {
+        "Value": ""
+      }
+    },
+    "AllowedFontSrc": {
+      "dev": {
+        "Value": ""
+      },
+      "qa": {
+        "Value": ""
+      },
+      "stage": {
+        "Value": ""
+      },
+      "prod": {
+        "Value": ""
+      }
+    },
+    "AllowCorsOrigin": {
+      "dev": {
+        "Value": ""
+      },
+      "qa": {
+        "Value": ""
+      },
+      "stage": {
+        "Value": ""
+      },
+      "prod": {
+        "Value": ""
+      }
+    }
+  },
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "ProxyFunctionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "Environment"
+              },
+              "seo-management-app-Role"
+            ]
+          ]
+        },
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": [
+                "sts:AssumeRole"
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              }
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "seo-management-app-Policy",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:*"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ],
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+          "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess",
+          "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
+          {
+            "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:policy/Account-Secret-Manager-Access-Policy"
+          }
+        ]
+      }
+    },
+    "ProxyFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Architectures": [
+          "arm64"
+        ],
+        "FunctionName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "Environment"
+              },
+              "seo-management-app"
+            ]
+          ]
+        },
+        "Code": {
+          "S3Bucket": {
+            "Fn::FindInMap": [
+              "S3BucketMapping",
+              {
+                "Ref": "Environment"
+              },
+              "Value"
+            ]
+          },
+          "S3Key": {
+            "Ref": "BuildPath"
+          }
+        },
+        "Tags": [
+          {
+            "Value": "TRAVEAZY",
+            "Key": "LOB"
+          },
+          {
+            "Value": "SEO",
+            "Key": "PRODUCT"
+          }
+        ],
+        "MemorySize": 2048,
+        "Environment": {
+          "Variables": {
+            "STAGE": {
+              "Ref": "Environment"
+            },
+            "JS_VERSION": {
+              "Ref": "JsVersion"
+            },
+            "MAX_AJAX_RETRIES": "2",
+            "DEBUG_MODE": "off",
+            "DATE_FORMAT": "yyyy-MM-dd",
+            "ALLOWED_SCRIPT_SRC": {
+              "Fn::FindInMap": [
+                "AllowedScriptSrc",
+                {
+                  "Ref": "Environment"
+                },
+                "Value"
+              ]
+            },
+            "ALLOWED_CONNECT_SRC": {
+              "Fn::FindInMap": [
+                "AllowedConnectSrc",
+                {
+                  "Ref": "Environment"
+                },
+                "Value"
+              ]
+            },
+            "ALLOWED_IMG_SRC": {
+              "Fn::FindInMap": [
+                "AllowedImgSrc",
+                {
+                  "Ref": "Environment"
+                },
+                "Value"
+              ]
+            },
+            "ALLOWED_FRAME_SRC": {
+              "Fn::FindInMap": [
+                "AllowedFrameSrc",
+                {
+                  "Ref": "Environment"
+                },
+                "Value"
+              ]
+            },
+            "ALLOWED_OBJECT_SRC": {
+              "Fn::FindInMap": [
+                "AllowedObjectSrc",
+                {
+                  "Ref": "Environment"
+                },
+                "Value"
+              ]
+            },
+            "ALLOWED_STYLE_SRC": {
+              "Fn::FindInMap": [
+                "AllowedStyleSrc",
+                {
+                  "Ref": "Environment"
+                },
+                "Value"
+              ]
+            },
+            "ALLOWED_FONT_SRC": {
+              "Fn::FindInMap": [
+                "AllowedFontSrc",
+                {
+                  "Ref": "Environment"
+                },
+                "Value"
+              ]
+            },
+            "ALLOW_CORSORIGIN": {
+              "Fn::FindInMap": [
+                "AllowCorsOrigin",
+                {
+                  "Ref": "Environment"
+                },
+                "Value"
+              ]
+            }
+          }
+        },
+        "Handler": "index.handler",
+        "Role": {
+          "Fn::GetAtt": [
+            "ProxyFunctionRole",
+            "Arn"
+          ]
+        },
+        "Timeout": 900,
+        "Runtime": "nodejs16.x",
+        "VpcConfig": {
+          "SecurityGroupIds": {
+            "Fn::FindInMap": [
+              "SecurityGroupIdsMapping",
+              {
+                "Ref": "Environment"
+              },
+              "Value"
+            ]
+          },
+          "SubnetIds": {
+            "Fn::FindInMap": [
+              "SubnetIdsMapping",
+              {
+                "Ref": "Environment"
+              },
+              "Value"
+            ]
+          }
+        }
+      }
+    },
+    "LambdaLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "DependsOn": "ProxyFunction",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Join": [
+            "",
+            [
+              "/aws/lambda/",
+              {
+                "Ref": "ProxyFunction"
+              }
+            ]
+          ]
+        },
+        "RetentionInDays": 1
+      }
+    }
+  }
+}

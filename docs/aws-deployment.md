@@ -1,7 +1,7 @@
 
 # Deploying to AWS Lambda with API Gateway
 
-This document outlines the steps to deploy the SEO Management Tool to AWS Lambda with API Gateway for serverless operation.
+This document outlines the steps to deploy the SEO Management Tool to AWS Lambda with API Gateway for serverless operation, following the Azure DevOps pipeline model.
 
 ## Prerequisites
 
@@ -12,9 +12,22 @@ This document outlines the steps to deploy the SEO Management Tool to AWS Lambda
 
 ## Deployment Options
 
-### Option 1: Using Serverless Framework (Recommended)
+### Option 1: Using Azure DevOps Pipelines (Recommended)
 
-The Serverless Framework provides a simple way to deploy Lambda functions with all necessary resources.
+The deployment process mirrors the TzyPackage.UI pipeline shown in the reference images, with:
+
+1. **Build Pipeline**:
+   - Source Code Checkout
+   - Restore Dependencies
+   - Build React Application
+   - Publish Artifacts
+   - S3 Upload to appropriate environment bucket
+
+2. **Release Pipeline**:
+   - CloudFormation deployment from S3 artifact
+   - Configuration based on environment parameters
+
+### Option 2: Using Serverless Framework
 
 1. **Install Serverless Framework**:
    ```
@@ -33,7 +46,7 @@ The Serverless Framework provides a simple way to deploy Lambda functions with a
 
    Where `[environment]` is one of: `dev`, `qa`, `stage`, `prod`
 
-### Option 2: Manual Deployment
+### Option 3: Manual CloudFormation Deployment
 
 #### 1. Build your React application
 
@@ -51,59 +64,39 @@ Your Lambda package should have the following structure:
 │   ├── static/
 │   └── ...
 ├── index.js        # The Lambda handler
-├── serverless.yml  # Serverless configuration
-└── node_modules/   # Only production dependencies
+├── node_modules/   # Only production dependencies
+└── serverless.yml  # Serverless configuration
 ```
 
-#### 3. Create a deployment package
+#### 3. Create and upload a deployment package
 
 ```bash
 # Install production dependencies only
 npm ci --production
 
 # Create a zip file
-zip -r deployment.zip index.js dist node_modules
+zip -r deployment.zip index.js dist node_modules serverless.yml
+
+# Upload to S3
+aws s3 cp deployment.zip s3://vsts-dev-lambda-drop/seo-management-app/dev/build$(date +%Y%m%d%H%M%S)/seo-management-app.zip
 ```
 
-#### 4. Deploy to AWS Lambda
+#### 4. Deploy with CloudFormation
 
-**Using AWS CLI:**
 ```bash
-# Create a new Lambda function
-aws lambda create-function \
-  --function-name seo-management-app \
-  --runtime nodejs16.x \
-  --architecture arm64 \
-  --role arn:aws:iam::ACCOUNT_ID:role/lambda-execution-role \
-  --handler index.handler \
-  --zip-file fileb://deployment.zip
-
-# Or update an existing function
-aws lambda update-function-code \
-  --function-name seo-management-app \
-  --zip-file fileb://deployment.zip
+# Deploy using CloudFormation
+aws cloudformation deploy \
+  --template-file cloudformation.json \
+  --stack-name dev-seo-management-app \
+  --parameter-overrides \
+    Environment=dev \
+    BuildPath=seo-management-app/dev/build$(date +%Y%m%d%H%M%S)/seo-management-app.zip \
+    JsVersion=$(date +%Y%m%d%H%M%S)
 ```
-
-## Environment Variables
-
-These environment variables are configured in the serverless.yml file or can be set directly in the Lambda function:
-
-- `STAGE`: Deployment environment (dev, qa, stage, prod)
-- `JS_VERSION`: Build version identifier
-- `MAX_AJAX_RETRIES`: Number of API request retries
-- `DATE_FORMAT`: Standard date format
-- `DEBUG_MODE`: Enable/disable debug mode
-- `ALLOWED_SCRIPT_SRC`: CSP script-src directive
-- `ALLOWED_CONNECT_SRC`: CSP connect-src directive
-- `ALLOWED_IMG_SRC`: CSP img-src directive
-- `ALLOWED_FRAME_SRC`: CSP frame-src directive
-- `ALLOWED_OBJECT_SRC`: CSP object-src directive
-- `ALLOWED_STYLE_SRC`: CSP style-src directive
-- `ALLOWED_FONT_SRC`: CSP font-src directive
 
 ## VPC Configuration
 
-This application is configured to run within a VPC for enhanced security. The specific security groups and subnets are defined in the `serverless.yml` file for each environment.
+This application is configured to run within a VPC for enhanced security. The specific security groups and subnets are defined in the CloudFormation template for each environment.
 
 ## Security Headers
 
@@ -116,49 +109,32 @@ The application implements the following security headers:
 - Strict-Transport-Security
 - Referrer-Policy
 
-## Monitoring and Troubleshooting
+## Mapping to Azure DevOps Pipeline
 
-- **CloudWatch Logs**: Monitor Lambda execution logs
-- **CloudWatch Metrics**: Track invocation count, duration, and errors
-- **X-Ray**: Enable tracing for request analysis (optional)
+The deployment process maps to the Azure DevOps pipeline as follows:
+
+1. **Build Pipeline**: 
+   - Matches the steps in the first screenshot (TzyPackage.UI pipeline)
+   - Source code checkout, restore, build, publish artifact
+   - S3 upload steps for each environment target
+
+2. **Release Pipeline**:
+   - Matches the CloudFormation deployment step in the second screenshot
+   - Uses CloudFormation template to create/update Lambda function
+   - Configures environment variables and VPC settings
 
 ## CI/CD Integration
 
-For CI/CD, you can use GitHub Actions or AWS CodePipeline to automate the build and deployment process.
+For Azure DevOps CI/CD, use the pipeline template shown in the screenshots as a reference. The key components are:
 
-### GitHub Actions Example
+1. **Build Pipeline Tasks**:
+   - Get sources
+   - Restore dependencies
+   - Build React app
+   - Publish artifact
+   - S3 Upload to environment bucket
 
-Create a file at `.github/workflows/deploy.yml`:
-
-```yaml
-name: Deploy to AWS Lambda
-
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16'
-          
-      - name: Install dependencies
-        run: npm ci
-        
-      - name: Build application
-        run: npm run build
-        
-      - name: Deploy with Serverless Framework
-        run: npx serverless deploy --stage prod --jsVersion $(date +%Y%m%d%H%M%S)
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-```
+2. **Release Pipeline Tasks**:
+   - AWS CloudFormation Create/Update Stack task
+   - Template parameters for BuildPath
+   - Environment-specific configuration

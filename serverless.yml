@@ -6,7 +6,7 @@ provider:
   runtime: nodejs16.x
   architecture: arm64
   stage: ${opt:stage, 'dev'}
-  region: ${opt:region, 'us-east-1'}
+  region: ${opt:region, 'ap-southeast-1'}
   memorySize: 2048
   timeout: 900
   logRetentionInDays: 1
@@ -32,7 +32,14 @@ provider:
     MAX_AJAX_RETRIES: 2
     DATE_FORMAT: yyyy-MM-dd
     DEBUG_MODE: off
-    # Additional environment variables as needed
+    ALLOWED_SCRIPT_SRC: ${self:custom.allowedSrc.scriptSrc.${self:provider.stage}}
+    ALLOWED_CONNECT_SRC: ${self:custom.allowedSrc.connectSrc.${self:provider.stage}}
+    ALLOWED_IMG_SRC: ${self:custom.allowedSrc.imgSrc.${self:provider.stage}}
+    ALLOWED_FRAME_SRC: ${self:custom.allowedSrc.frameSrc.${self:provider.stage}}
+    ALLOWED_OBJECT_SRC: ${self:custom.allowedSrc.objectSrc.${self:provider.stage}}
+    ALLOWED_STYLE_SRC: ${self:custom.allowedSrc.styleSrc.${self:provider.stage}}
+    ALLOWED_FONT_SRC: ${self:custom.allowedSrc.fontSrc.${self:provider.stage}}
+    ALLOW_CORSORIGIN: ${self:custom.allowedSrc.corsOrigin.${self:provider.stage}}
     
 custom:
   securityGroupIds:
@@ -62,6 +69,47 @@ custom:
     qa: vsts-dev-lambda-drop
     stage: vsts-dev-lambda-drop-mumbai
     prod: vsts-dev-lambda-drop-mumbai
+  allowedSrc:
+    scriptSrc:
+      dev: "*.googleapis.com"
+      qa: "*.googleapis.com"
+      stage: "*.googleapis.com"
+      prod: "*.googleapis.com"
+    connectSrc:
+      dev: "*.googleapis.com"
+      qa: "*.googleapis.com"
+      stage: "*.googleapis.com"
+      prod: "*.googleapis.com"
+    imgSrc:
+      dev: ""
+      qa: ""
+      stage: ""
+      prod: ""
+    frameSrc:
+      dev: ""
+      qa: ""
+      stage: ""
+      prod: ""
+    objectSrc:
+      dev: ""
+      qa: ""
+      stage: ""
+      prod: ""
+    styleSrc:
+      dev: ""
+      qa: ""
+      stage: ""
+      prod: ""
+    fontSrc:
+      dev: ""
+      qa: ""
+      stage: ""
+      prod: ""
+    corsOrigin:
+      dev: ""
+      qa: ""
+      stage: ""
+      prod: ""
   
 functions:
   app:
