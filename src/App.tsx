@@ -19,6 +19,7 @@ import Search from "./pages/Search";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import TrainBooking from "./pages/TrainBooking";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="/settings" element={<Settings />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/search" element={<Search />} />
+              <Route path="/train-booking" element={<TrainBooking />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />
