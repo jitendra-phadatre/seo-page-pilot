@@ -1,124 +1,104 @@
 
-# Deploying to AWS Lambda with CI/CD
+# Deploying to AWS Lambda with API Gateway
 
-This document outlines the steps to deploy the SEO Management Tool to AWS Lambda for serverless operation, including setting up a CI/CD pipeline for automated deployments.
+This document outlines the steps to deploy the SEO Management Tool to AWS Lambda with API Gateway for serverless operation.
 
 ## Prerequisites
 
 1. AWS Account with appropriate permissions
 2. AWS CLI installed and configured
 3. Node.js v16+ installed
-4. Serverless Framework installed (`npm install -g serverless`)
-5. GitHub repository for your codebase
+4. Serverless Framework recommended (`npm install -g serverless`)
 
-## Configuration Steps
+## Deployment Options
 
-### 1. Create a Serverless Framework configuration
+### Option 1: Using Serverless Framework (Recommended)
 
-Create a `serverless.yml` file in the root of your project:
+The Serverless Framework provides a simple way to deploy Lambda functions with all necessary resources.
 
-```yaml
-service: seo-management-tool
+1. **Install Serverless Framework**:
+   ```
+   npm install -g serverless
+   ```
 
-provider:
-  name: aws
-  runtime: nodejs16.x
-  stage: ${opt:stage, 'dev'}
-  region: ${opt:region, 'us-east-1'}
-  environment:
-    SUPABASE_URL: ${env:SUPABASE_URL}
-    SUPABASE_KEY: ${env:SUPABASE_KEY}
+2. **Configure AWS credentials**:
+   ```
+   aws configure
+   ```
 
-functions:
-  app:
-    handler: server.handler
-    events:
-      - http: ANY /
-      - http: 'ANY {proxy+}'
-    timeout: 30
-    memorySize: 1024
+3. **Run deploy script**:
+   ```
+   ./deploy.sh
+   ```
 
-plugins:
-  - serverless-offline
-  - serverless-dotenv-plugin
+### Option 2: Manual Deployment
 
-custom:
-  dotenv:
-    path: .env.${opt:stage, 'dev'}
+#### 1. Build your React application
+
+```bash
+npm run build
 ```
 
-### 2. Create a server wrapper for Express
+#### 2. Prepare the Lambda package
 
-Create a `server.js` file:
-
-```javascript
-const serverless = require('serverless-http');
-const express = require('express');
-const path = require('path');
-
-const app = express();
-
-// Serve static files
-app.use(express.static(path.join(__dirname, 'dist')));
-
-// Handle all routes for SPA
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
-
-// Export for serverless
-module.exports.handler = serverless(app);
+Your Lambda package should have the following structure:
+```
+/
+├── dist/           # The build output folder of your React application
+│   ├── index.html
+│   ├── static/
+│   └── ...
+├── index.js        # The Lambda handler
+└── node_modules/   # Only production dependencies
 ```
 
-### 3. Update package.json
+#### 3. Create a deployment package
 
-Add the following dependencies:
+```bash
+# Install production dependencies only
+npm ci --production
 
-```json
-{
-  "dependencies": {
-    "express": "^4.17.1",
-    "serverless-http": "^3.1.1"
-  },
-  "devDependencies": {
-    "serverless-offline": "^12.0.4",
-    "serverless-dotenv-plugin": "^4.0.2"
-  }
-}
+# Create a zip file
+zip -r deployment.zip index.js dist node_modules
 ```
 
-### 4. Build script for deployment
+#### 4. Deploy to AWS Lambda
 
-```json
-{
-  "scripts": {
-    "build:lambda": "npm run build && cp server.js package.json dist/",
-    "deploy": "npm run build:lambda && cd dist && serverless deploy"
-  }
-}
+**Using AWS CLI:**
+```bash
+# Create a new Lambda function
+aws lambda create-function \
+  --function-name seo-management-app \
+  --runtime nodejs16.x \
+  --role arn:aws:iam::ACCOUNT_ID:role/lambda-execution-role \
+  --handler index.handler \
+  --zip-file fileb://deployment.zip
+
+# Or update an existing function
+aws lambda update-function-code \
+  --function-name seo-management-app \
+  --zip-file fileb://deployment.zip
 ```
 
-## Setting up CI/CD with GitHub Actions
+#### 5. Configure API Gateway
 
-### 1. Create AWS IAM User for CI/CD
+1. Create a new API Gateway REST API
+2. Create a proxy resource with `{proxy+}` path
+3. Set up the ANY method and integrate with your Lambda function
+4. Deploy the API to a stage
 
-1. In your AWS Console, navigate to IAM
-2. Create a new user with programmatic access
-3. Attach the `AdministratorAccess` policy (or create a custom policy with Lambda, API Gateway, S3, CloudFormation, IAM, and CloudWatch permissions)
-4. Save the Access Key ID and Secret Access Key
+## Environment Variables
 
-### 2. Add GitHub Repository Secrets
+For both deployment options, you should set these environment variables in the Lambda function:
 
-In your GitHub repository:
-1. Go to Settings > Secrets and Variables > Actions
-2. Add the following secrets:
-   - `AWS_ACCESS_KEY_ID`: Your IAM user access key
-   - `AWS_SECRET_ACCESS_KEY`: Your IAM user secret key
-   - `AWS_REGION`: Your preferred AWS region (e.g., `us-east-1`)
-   - `SUPABASE_URL`: Your Supabase project URL
-   - `SUPABASE_KEY`: Your Supabase project API key
+- `SUPABASE_URL`: Your Supabase project URL
+- `SUPABASE_KEY`: Your Supabase project API key
 
-### 3. Create GitHub Actions Workflow
+## Continuous Integration/Deployment
+
+For CI/CD, you can use GitHub Actions or AWS CodePipeline to automate the build and deployment process.
+
+### GitHub Actions Example
 
 Create a file at `.github/workflows/deploy.yml`:
 
@@ -128,91 +108,51 @@ name: Deploy to AWS Lambda
 on:
   push:
     branches:
-      - main  # or master, depending on your primary branch name
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    
     steps:
       - uses: actions/checkout@v3
-
+      
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '16'
-          cache: 'npm'
-
+          
       - name: Install dependencies
         run: npm ci
-
-      - name: Install Serverless Framework
-        run: npm install -g serverless
-
+        
       - name: Build application
         run: npm run build
-
-      - name: Deploy to AWS Lambda
-        run: |
-          cp server.js package.json dist/
-          cd dist
-          npm install --production
-          serverless deploy --stage prod
+        
+      - name: Deploy with Serverless Framework
+        run: npx serverless deploy --stage prod
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
 ```
 
-## Environment Variables
+## Performance Optimization
 
-Create environment files for different deployment stages:
+To optimize performance:
 
-1. Create `.env.dev`, `.env.staging`, and `.env.prod` files with appropriate variables:
-   ```
-   SUPABASE_URL=your_supabase_url
-   SUPABASE_KEY=your_supabase_api_key
-   ```
+1. **Caching**: Add appropriate cache headers in the Lambda response
+2. **Compression**: Enable GZIP/Brotli compression at API Gateway level
+3. **Memory**: Increase Lambda memory (which also increases CPU) for faster response times
 
-2. Add these files to `.gitignore` to prevent committing sensitive information
+## Monitoring and Troubleshooting
 
-## Deployment Process
+- **CloudWatch Logs**: Monitor Lambda execution logs
+- **CloudWatch Metrics**: Track invocation count, duration, and errors
+- **X-Ray**: Enable tracing for request analysis (optional)
 
-### Manual Deployment
+## Cost Considerations
 
-1. Set up AWS credentials:
-   ```
-   aws configure
-   ```
-
-2. Build and deploy:
-   ```
-   npm run deploy
-   ```
-
-### Automatic Deployment via CI/CD
-
-Pushing to your main branch will automatically trigger the GitHub Actions workflow to:
-1. Build your application
-2. Deploy it to AWS Lambda
-3. Set up the API Gateway
-
-## Monitoring and Logging
-
-- AWS CloudWatch is automatically integrated with Lambda functions
-- View logs, set up alarms, and monitor performance metrics through the AWS Console
-- Consider setting up CloudWatch Dashboards for key metrics
-
-## Cost Optimization
-
-- Lambda charges based on execution time and memory allocation
-- Consider adjusting the `memorySize` in your `serverless.yml` based on actual usage
-- Set up AWS Budgets to monitor costs
-
-## Additional Resources
-
-- [AWS Lambda Documentation](https://docs.aws.amazon.com/lambda/latest/dg/welcome.html)
-- [Serverless Framework Documentation](https://www.serverless.com/framework/docs/)
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
-- [Express.js Documentation](https://expressjs.com/)
+- Lambda is charged by invocation count and duration
+- API Gateway is charged by request count
+- Set up budget alerts to monitor costs

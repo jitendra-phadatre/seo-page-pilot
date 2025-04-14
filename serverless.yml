@@ -1,0 +1,32 @@
+
+service: seo-management-app
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  memorySize: 512
+  timeout: 10
+  logRetentionInDays: 14
+  
+functions:
+  app:
+    handler: index.handler
+    events:
+      - http:
+          path: /
+          method: GET
+      - http:
+          path: /{proxy+}
+          method: GET
+    environment:
+      NODE_ENV: production
+
+package:
+  patterns:
+    - '!**'
+    - 'index.js'
+    - 'dist/**'
+    - '!dist/**/*.map'
+    - '!node_modules/**'
