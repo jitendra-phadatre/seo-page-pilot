@@ -1,0 +1,78 @@
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+
+variables:
+  - name: nodeVersion
+    value: '16.x'
+  - group: aws-credentials
+
+stages:
+  - stage: Build
+    jobs:
+      - job: BuildApp
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(nodeVersion)
+            displayName: 'Install Node.js'
+
+          - script: |
+              npm ci
+              npm run build
+            displayName: 'npm install and build'
+
+          - task: ArchiveFiles@2
+            inputs:
+              rootFolderOrFile: '$(Build.SourcesDirectory)'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '$(Build.ArtifactStagingDirectory)/deployment.zip'
+              replaceExistingArchive: true
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              artifactName: 'drop'
+
+  - stage: Deploy
+    dependsOn: Build
+    jobs:
+      - deployment: Deploy
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: $(Environment)
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: drop
+
+                - task: AWSCLI@1
+                  inputs:
+                    awsCredentials: 'AWS'
+                    regionName: 'ap-southeast-1'
+                    awsCommand: 's3'
+                    awsSubCommand: 'cp'
+                    awsArguments: '$(Pipeline.Workspace)/drop/deployment.zip s3://seo-management-$(Environment)/seo-management-app/$(Build.BuildNumber)/seo-management-app.zip'
+
+                - task: AWSCLI@1
+                  inputs:
+                    awsCredentials: 'AWS'
+                    regionName: 'ap-southeast-1'
+                    awsCommand: 'cloudformation'
+                    awsSubCommand: 'deploy'
+                    awsArguments: >
+                      --template-file cloudformation.json
+                      --stack-name $(Environment)-seo-management-app
+                      --parameter-overrides
+                      Environment=$(Environment)
+                      BuildPath=seo-management-app/$(Build.BuildNumber)/seo-management-app.zip
+                      JsVersion=$(Build.BuildNumber)
+                      --capabilities CAPABILITY_IAM

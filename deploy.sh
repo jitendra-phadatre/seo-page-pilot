@@ -19,9 +19,9 @@ zip -r deployment.zip index.js dist node_modules serverless.yml
 
 # Upload to S3 bucket based on environment
 echo "Uploading deployment package to S3..."
-S3_BUCKET="vsts-dev-lambda-drop"
+S3_BUCKET="seo-management-${STAGE}"
 if [ "$STAGE" == "stage" ] || [ "$STAGE" == "prod" ]; then
-  S3_BUCKET="vsts-dev-lambda-drop-mumbai"
+  S3_BUCKET="seo-management-${STAGE}-prod"
 fi
 
 # Create path for S3 upload
@@ -32,6 +32,14 @@ S3_PATH="seo-management-app/${STAGE}/build${BUILD_NUMBER}/seo-management-app.zip
 aws s3 cp deployment.zip s3://${S3_BUCKET}/${S3_PATH}
 echo "Uploaded to s3://${S3_BUCKET}/${S3_PATH}"
 
+# Create CloudFront invalidation
+if [ -n "$CLOUDFRONT_DISTRIBUTION_ID" ]; then
+  echo "Creating CloudFront invalidation..."
+  aws cloudfront create-invalidation \
+    --distribution-id ${CLOUDFRONT_DISTRIBUTION_ID} \
+    --paths "/*"
+fi
+
 # Deploy with CloudFormation if requested
 if [ "$2" == "deploy" ]; then
   echo "Deploying with CloudFormation to $STAGE environment..."
@@ -41,7 +49,8 @@ if [ "$2" == "deploy" ]; then
     --parameter-overrides \
       Environment=${STAGE} \
       BuildPath=${S3_PATH} \
-      JsVersion=${JS_VERSION}
+      JsVersion=${JS_VERSION} \
+      CloudFrontDistributionId=${CLOUDFRONT_DISTRIBUTION_ID}
 fi
 
 echo "Deployment process completed!"
