@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Eye, Save, Trash } from "lucide-react";
+import { Eye, Globe, Save, Trash } from "lucide-react";
 
 interface SeoPageFormHeaderProps {
   isNew: boolean;
@@ -8,6 +8,8 @@ interface SeoPageFormHeaderProps {
   slug: string;
   handleDelete: () => void;
   handlePreview: () => void;
+  showLanguageOptions?: boolean;
+  onToggleLanguageOptions?: () => void;
 }
 
 export function SeoPageFormHeader({ 
@@ -15,7 +17,9 @@ export function SeoPageFormHeader({
   isSaving, 
   slug, 
   handleDelete,
-  handlePreview
+  handlePreview,
+  showLanguageOptions = false,
+  onToggleLanguageOptions
 }: SeoPageFormHeaderProps) {
   return (
     <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
@@ -28,6 +32,17 @@ export function SeoPageFormHeader({
         </p>
       </div>
       <div className="flex items-center gap-2">
+        {!isNew && onToggleLanguageOptions && (
+          <Button 
+            type="button" 
+            variant="outline"
+            onClick={onToggleLanguageOptions}
+            className={showLanguageOptions ? "bg-muted" : ""}
+          >
+            <Globe className="mr-2 h-4 w-4" />
+            Translations
+          </Button>
+        )}
         {!isNew && (
           <Button 
             type="button" 
