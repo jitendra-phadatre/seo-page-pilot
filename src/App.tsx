@@ -30,6 +30,9 @@ const queryClient = new QueryClient({
   },
 });
 
+// Define supported languages
+const SUPPORTED_LANGUAGES = ['en', 'es', 'fr', 'de', 'it', 'zh', 'ja', 'ar'];
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -38,9 +41,10 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Auth routes don't need language prefix */}
             <Route path="/auth" element={<Auth />} />
             
-            {/* Protected Routes */}
+            {/* Default language routes (no prefix) */}
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<Index />} />
               <Route path="/seo-pages" element={<SeoPages />} />
@@ -55,6 +59,24 @@ const App = () => (
               <Route path="/search" element={<Search />} />
               <Route path="/train-booking" element={<TrainBooking />} />
             </Route>
+            
+            {/* Language prefixed routes */}
+            {SUPPORTED_LANGUAGES.map(lang => (
+              <Route key={lang} path={`/${lang}`} element={<ProtectedRoute />}>
+                <Route path="" element={<Index />} />
+                <Route path="seo-pages" element={<SeoPages />} />
+                <Route path="seo-pages/:id" element={<SeoPageEditor />} />
+                <Route path="analytics" element={<Analytics />} />
+                <Route path="internal-links" element={<InternalLinks />} />
+                <Route path="sitemap" element={<SitemapRobots />} />
+                <Route path="schema" element={<SchemaMarkup />} />
+                <Route path="users" element={<Users />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="search" element={<Search />} />
+                <Route path="train-booking" element={<TrainBooking />} />
+              </Route>
+            ))}
             
             <Route path="*" element={<NotFound />} />
           </Routes>

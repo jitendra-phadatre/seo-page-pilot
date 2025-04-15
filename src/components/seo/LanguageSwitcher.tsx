@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Check, ChevronDown, Globe } from "lucide-react";
@@ -24,6 +24,27 @@ interface LanguageSwitcherProps {
   className?: string;
 }
 
+// Language context for sharing selected language across components
+export const LanguageContext = createContext<{
+  currentLanguage: string;
+  setCurrentLanguage: (lang: string) => void;
+}>({
+  currentLanguage: 'en',
+  setCurrentLanguage: () => {},
+});
+
+export const useLanguage = () => useContext(LanguageContext);
+
+export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
+  const [currentLanguage, setCurrentLanguage] = useState<string>('en');
+  
+  return (
+    <LanguageContext.Provider value={{ currentLanguage, setCurrentLanguage }}>
+      {children}
+    </LanguageContext.Provider>
+  );
+};
+
 const DEFAULT_LANGUAGES: Language[] = [
   { code: 'en', name: 'English', flag: '🇺🇸' },
   { code: 'es', name: 'Español', flag: '🇪🇸' },
@@ -42,7 +63,7 @@ export function LanguageSwitcher({
 }: LanguageSwitcherProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [currentLanguage, setCurrentLanguage] = useState<string>('en');
+  const { currentLanguage, setCurrentLanguage } = useLanguage();
 
   useEffect(() => {
     // Extract language from URL path if present (/es/page-slug)
@@ -56,18 +77,18 @@ export function LanguageSwitcher({
         setCurrentLanguage(browserLang);
       }
     }
-  }, [location.pathname, availableLanguages]);
+  }, [location.pathname, availableLanguages, setCurrentLanguage]);
 
   const handleLanguageChange = (langCode: string) => {
     if (langCode === currentLanguage) return;
 
     // Get the current path without language prefix
     let currentPath = location.pathname;
-    const pathMatch = currentPath.match(/^\/[a-z]{2}(\/.*|$)/);
+    const pathMatch = currentPath.match(/^\/([a-z]{2})(\/.*|$)/);
     
     if (pathMatch) {
       // If current URL has language prefix, remove it
-      currentPath = pathMatch[1] || '/';
+      currentPath = pathMatch[2] || '/';
     }
 
     // Navigate to the same page with new language prefix

@@ -23,6 +23,9 @@ const getSecurityHeaders = () => {
   };
 };
 
+// List of supported languages
+const SUPPORTED_LANGUAGES = ['en', 'es', 'fr', 'de', 'it', 'zh', 'ja', 'ar'];
+
 // Handler for API Gateway events
 exports.handler = async (event, context) => {
   // Get the requested path from the event
@@ -35,64 +38,28 @@ exports.handler = async (event, context) => {
   // Base directory where static assets are stored
   const basePath = path.join(__dirname, 'dist');
   
-  // Prepare path to the requested file
-  let filePath = requestPath === '/' ? '/index.html' : requestPath;
-  
-  // Handle language path prefix if present (e.g., /es/about -> /about in Spanish)
-  const langMatch = filePath.match(/^\/([a-z]{2})(\/.*|$)/);
-  let selectedLanguage = null;
-  
-  if (langMatch) {
-    selectedLanguage = langMatch[1];
-    filePath = langMatch[2] || '/index.html';
-    if (filePath === '/') filePath = '/index.html';
-  } else {
-    // If no language specified in URL, use detected language or default
-    selectedLanguage = detectedLanguage || 'en';
-  }
-  
-  // Full path to the requested file
-  let fullPath = path.join(basePath, filePath);
-  
-  // If file doesn't exist, try language-specific version first
-  if (!fs.existsSync(fullPath) && selectedLanguage) {
-    const langPath = path.join(basePath, `${selectedLanguage}${filePath}`);
-    if (fs.existsSync(langPath)) {
-      fullPath = langPath;
-    }
-  }
-  
-  // SPA fallback: use index.html for non-existent paths that don't have file extensions
-  if (!fs.existsSync(fullPath) && !path.extname(filePath)) {
-    fullPath = path.join(basePath, 'index.html');
-  }
-  
   try {
-    // Read the file
-    const fileContents = fs.readFileSync(fullPath);
+    // Check if the requested path is a static asset (has file extension)
+    const hasFileExtension = path.extname(requestPath) !== '';
     
-    // Determine content type based on file extension
-    const contentType = mime.lookup(fullPath) || 'text/html';
+    if (hasFileExtension) {
+      // For static assets, serve directly
+      return await serveStaticFile(requestPath, basePath);
+    }
     
-    // Get security headers
-    const securityHeaders = getSecurityHeaders();
+    // Handle language path prefix if present (e.g., /es/about)
+    const langMatch = requestPath.match(/^\/([a-z]{2})(\/.*|$)/);
+    let selectedLanguage = null;
+    let appPath = requestPath;
     
-    // Return the response
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': contentType,
-        ...securityHeaders,
-        // Add CORS headers if configured
-        ...(process.env.ALLOW_CORSORIGIN ? {
-          'Access-Control-Allow-Origin': process.env.ALLOW_CORSORIGIN,
-          'Access-Control-Allow-Methods': 'GET, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        } : {})
-      },
-      body: fileContents.toString('base64'),
-      isBase64Encoded: true
-    };
+    if (langMatch && SUPPORTED_LANGUAGES.includes(langMatch[1])) {
+      selectedLanguage = langMatch[1];
+      appPath = langMatch[2] || '/';
+    }
+    
+    // For all app routes (not static assets), serve index.html
+    return await serveAppRoute(basePath, selectedLanguage);
+    
   } catch (err) {
     console.error('Error serving file:', err);
     
@@ -109,6 +76,43 @@ exports.handler = async (event, context) => {
     };
   }
 };
+
+// Serve a static file (JS, CSS, images, etc.)
+async function serveStaticFile(requestPath, basePath) {
+  const filePath = path.join(basePath, requestPath);
+  const fileContents = fs.readFileSync(filePath);
+  
+  // Determine content type based on file extension
+  const contentType = mime.lookup(filePath) || 'application/octet-stream';
+  
+  return {
+    statusCode: 200,
+    headers: {
+      'Content-Type': contentType,
+      ...getSecurityHeaders(),
+    },
+    body: fileContents.toString('base64'),
+    isBase64Encoded: true
+  };
+}
+
+// Serve the app for SPA routing
+async function serveAppRoute(basePath, language) {
+  const indexPath = path.join(basePath, 'index.html');
+  const fileContents = fs.readFileSync(indexPath);
+  
+  return {
+    statusCode: 200,
+    headers: {
+      'Content-Type': 'text/html',
+      ...getSecurityHeaders(),
+      // Add language info in header for clients that need it
+      'Content-Language': language || 'en'
+    },
+    body: fileContents.toString('base64'),
+    isBase64Encoded: true
+  };
+}
 
 // Helper function to parse Accept-Language header
 function parseAcceptLanguage(header) {
