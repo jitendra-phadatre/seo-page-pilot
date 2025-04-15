@@ -1,0 +1,72 @@
+
+{
+  "Resources": {
+    "ProxyFunctionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": {
+          "Fn::Join": ["-", [{ "Ref": "Environment" }, "seo-management-app-Role"]]
+        },
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Action": ["sts:AssumeRole"],
+            "Effect": "Allow",
+            "Principal": {
+              "Service": ["lambda.amazonaws.com"]
+            }
+          }]
+        },
+        "Policies": [{
+          "PolicyName": "seo-management-app-Policy",
+          "PolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [{
+              "Effect": "Allow",
+              "Action": ["s3:*"],
+              "Resource": "*"
+            }]
+          }
+        }],
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+          "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess",
+          "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
+          { "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:policy/Account-Secret-Manager-Access-Policy" }
+        ]
+      }
+    },
+    "ProxyFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Architectures": ["arm64"],
+        "FunctionName": {
+          "Fn::Join": ["-", [{ "Ref": "Environment" }, "seo-management-app"]]
+        },
+        "Code": {
+          "S3Bucket": { "Fn::FindInMap": ["S3BucketMapping", { "Ref": "Environment" }, "Value"] },
+          "S3Key": { "Ref": "BuildPath" }
+        },
+        "Tags": [
+          { "Value": "TRAVEAZY", "Key": "LOB" },
+          { "Value": "SEO", "Key": "PRODUCT" }
+        ],
+        "MemorySize": 2048,
+        "Environment": {
+          "Variables": {
+            "STAGE": { "Ref": "Environment" },
+            "JS_VERSION": { "Ref": "JsVersion" }
+          }
+        },
+        "Handler": "index.handler",
+        "Role": { "Fn::GetAtt": ["ProxyFunctionRole", "Arn"] },
+        "Timeout": 900,
+        "Runtime": "nodejs16.x",
+        "VpcConfig": {
+          "SecurityGroupIds": { "Fn::FindInMap": ["SecurityGroupIdsMapping", { "Ref": "Environment" }, "Value"] },
+          "SubnetIds": { "Fn::FindInMap": ["SubnetIdsMapping", { "Ref": "Environment" }, "Value"] }
+        }
+      }
+    }
+  }
+}

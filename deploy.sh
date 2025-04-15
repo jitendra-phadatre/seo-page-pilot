@@ -28,7 +28,11 @@ fi
 BUILD_NUMBER=${BUILD_NUMBER:-$(date +%Y%m%d%H%M%S)}
 S3_PATH="seo-management-app/${STAGE}/build${BUILD_NUMBER}/seo-management-app.zip"
 
-# Upload to S3
+# Upload CloudFormation templates
+echo "Uploading CloudFormation templates..."
+aws s3 cp infrastructure/cloudformation/ s3://${S3_BUCKET}/cloudformation/ --recursive
+
+# Upload deployment package
 aws s3 cp deployment.zip s3://${S3_BUCKET}/${S3_PATH}
 echo "Uploaded to s3://${S3_BUCKET}/${S3_PATH}"
 
@@ -44,7 +48,7 @@ fi
 if [ "$2" == "deploy" ]; then
   echo "Deploying with CloudFormation to $STAGE environment..."
   aws cloudformation deploy \
-    --template-file cloudformation.json \
+    --template-file infrastructure/cloudformation/main.json \
     --stack-name ${STAGE}-seo-management-app \
     --parameter-overrides \
       Environment=${STAGE} \

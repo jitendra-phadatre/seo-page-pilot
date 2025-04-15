@@ -1,0 +1,47 @@
+
+{
+  "Mappings": {
+    "S3BucketMapping": {
+      "dev": { "Value": "vsts-dev-lambda-drop" },
+      "qa": { "Value": "vsts-dev-lambda-drop" },
+      "stage": { "Value": "vsts-dev-lambda-drop-mumbai" },
+      "prod": { "Value": "vsts-dev-lambda-drop-mumbai" }
+    },
+    "SecurityGroupIdsMapping": {
+      "dev": { "Value": ["sg-09369536aaa122537"] },
+      "qa": { "Value": ["sg-07070524589589625"] },
+      "stage": { "Value": ["sg-0d862bf2e1912ad0f"] },
+      "prod": { "Value": ["sg-0d862bf2e1912ad0f"] }
+    },
+    "SubnetIdsMapping": {
+      "dev": {
+        "Value": [
+          "subnet-03d88cd092be1469d",
+          "subnet-080ebc41f32dc9a85",
+          "subnet-018b5c6d09403d884"
+        ]
+      },
+      "qa": {
+        "Value": [
+          "subnet-0f1e532cf2efa30e6",
+          "subnet-05047ab53b26b6459",
+          "subnet-0cd6e2033a0e94c79"
+        ]
+      },
+      "stage": {
+        "Value": [
+          "subnet-0d1c318f18545454b",
+          "subnet-01a410c8881bbbe4d",
+          "subnet-0ebdfddee146f0f06"
+        ]
+      },
+      "prod": {
+        "Value": [
+          "subnet-0d1c318f18545454b",
+          "subnet-01a410c8881bbbe4d",
+          "subnet-0ebdfddee146f0f06"
+        ]
+      }
+    }
+  }
+}

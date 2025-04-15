@@ -27,6 +27,14 @@ stages:
               npm run build
             displayName: 'npm install and build'
 
+          - task: CopyFiles@2
+            inputs:
+              Contents: |
+                infrastructure/**
+                deployment.zip
+              TargetFolder: '$(Build.ArtifactStagingDirectory)'
+            displayName: 'Copy CloudFormation templates'
+
           - task: ArchiveFiles@2
             inputs:
               rootFolderOrFile: '$(Build.SourcesDirectory)'
@@ -55,6 +63,16 @@ stages:
                   artifact: drop
 
                 - task: AWSCLI@1
+                  displayName: 'Upload CloudFormation Templates'
+                  inputs:
+                    awsCredentials: 'AWS'
+                    regionName: 'ap-southeast-1'
+                    awsCommand: 's3'
+                    awsSubCommand: 'cp'
+                    awsArguments: '$(Pipeline.Workspace)/drop/infrastructure/cloudformation s3://seo-management-$(Environment)/cloudformation --recursive'
+
+                - task: AWSCLI@1
+                  displayName: 'Upload Deployment Package'
                   inputs:
                     awsCredentials: 'AWS'
                     regionName: 'ap-southeast-1'
@@ -63,13 +81,14 @@ stages:
                     awsArguments: '$(Pipeline.Workspace)/drop/deployment.zip s3://seo-management-$(Environment)/seo-management-app/$(Build.BuildNumber)/seo-management-app.zip'
 
                 - task: AWSCLI@1
+                  displayName: 'Deploy CloudFormation Stack'
                   inputs:
                     awsCredentials: 'AWS'
                     regionName: 'ap-southeast-1'
                     awsCommand: 'cloudformation'
                     awsSubCommand: 'deploy'
                     awsArguments: >
-                      --template-file cloudformation.json
+                      --template-file $(Pipeline.Workspace)/drop/infrastructure/cloudformation/main.json
                       --stack-name $(Environment)-seo-management-app
                       --parameter-overrides
                       Environment=$(Environment)

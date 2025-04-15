@@ -1,0 +1,49 @@
+
+{
+  "Description": "SEO Management App Infrastructure - Resources",
+  "Parameters": {
+    "BuildPath": {
+      "Type": "String",
+      "Description": "Path of S3 Object uploaded after build is completed"
+    },
+    "Environment": {
+      "Type": "String",
+      "Description": "Environment name"
+    },
+    "JsVersion": {
+      "Type": "String",
+      "Description": "Build Number"
+    }
+  },
+  "Resources": {
+    "LambdaStack": {
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": "./lambda.json",
+        "Parameters": {
+          "Environment": { "Ref": "Environment" },
+          "BuildPath": { "Ref": "BuildPath" },
+          "JsVersion": { "Ref": "JsVersion" }
+        }
+      }
+    },
+    "StorageStack": {
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": "./storage.json",
+        "Parameters": {
+          "Environment": { "Ref": "Environment" }
+        }
+      }
+    },
+    "CDNStack": {
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": "./cdn.json",
+        "Parameters": {
+          "Environment": { "Ref": "Environment" }
+        }
+      }
+    }
+  }
+}

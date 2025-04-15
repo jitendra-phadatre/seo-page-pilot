@@ -1,0 +1,46 @@
+
+{
+  "Resources": {
+    "S3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": {
+          "Fn::Join": ["-", ["seo-management", { "Ref": "Environment" }]]
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        }
+      }
+    },
+    "S3BucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": { "Ref": "S3Bucket" },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {
+              "AWS": {
+                "Fn::Join": ["", [
+                  "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ",
+                  { "Ref": "CloudFrontOriginAccessIdentity" }
+                ]]
+              }
+            },
+            "Action": "s3:GetObject",
+            "Resource": {
+              "Fn::Join": ["", [
+                { "Fn::GetAtt": ["S3Bucket", "Arn"] },
+                "/*"
+              ]]
+            }
+          }]
+        }
+      }
+    }
+  }
+}

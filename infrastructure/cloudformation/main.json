@@ -1,0 +1,37 @@
+
+{
+  "Description": "SEO Management App Infrastructure - Main Template",
+  "Parameters": {
+    "BuildPath": {
+      "MinLength": "0",
+      "Type": "String",
+      "Description": "Path of S3 Object uploaded after build is completed"
+    },
+    "Environment": {
+      "AllowedValues": ["dev", "qa", "stage", "prod"],
+      "Default": "dev",
+      "Description": "What environment is this?",
+      "Type": "String"
+    },
+    "JsVersion": {
+      "MinLength": "0",
+      "Type": "String",
+      "Description": "build Number"
+    }
+  },
+  "Resources": {
+    "MainStack": {
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": {
+          "Fn::Sub": "https://${S3BucketMapping.${Environment}.Value}.s3.amazonaws.com/cloudformation/infrastructure.json"
+        },
+        "Parameters": {
+          "Environment": { "Ref": "Environment" },
+          "BuildPath": { "Ref": "BuildPath" },
+          "JsVersion": { "Ref": "JsVersion" }
+        }
+      }
+    }
+  }
+}
