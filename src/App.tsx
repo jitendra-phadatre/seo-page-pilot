@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { useLanguage } from "./components/seo/LanguageSwitcher";
 import Index from "./pages/Index";
@@ -58,7 +58,7 @@ const LanguageAwareRoutes = () => {
       {/* Root path redirects based on current language */}
       <Route path="/" element={
         currentLanguage === 'en' 
-          ? <ProtectedRoute><Index /></ProtectedRoute> 
+          ? <Navigate to="/seo-pages" replace />
           : <Navigate to={`/${currentLanguage}`} replace />
       } />
       
@@ -80,7 +80,7 @@ const LanguageAwareRoutes = () => {
       {/* Language prefixed routes */}
       {SUPPORTED_LANGUAGES.map(lang => (
         <Route key={lang} path={`/${lang}`} element={<ProtectedRoute />}>
-          <Route path="" element={<Index />} />
+          <Route index element={<Navigate to={`/${lang}/seo-pages`} replace />} />
           <Route path="seo-pages" element={<SeoPages />} />
           <Route path="seo-pages/:id" element={<SeoPageEditor />} />
           <Route path="analytics" element={<Analytics />} />
