@@ -36,7 +36,16 @@ export const LanguageContext = createContext<{
 export const useLanguage = () => useContext(LanguageContext);
 
 export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
-  const [currentLanguage, setCurrentLanguage] = useState<string>('en');
+  // Initialize from localStorage or default to 'en'
+  const [currentLanguage, setCurrentLanguage] = useState<string>(() => {
+    const savedLanguage = localStorage.getItem('preferred-language');
+    return savedLanguage || 'en';
+  });
+  
+  // Save to localStorage whenever language changes
+  useEffect(() => {
+    localStorage.setItem('preferred-language', currentLanguage);
+  }, [currentLanguage]);
   
   return (
     <LanguageContext.Provider value={{ currentLanguage, setCurrentLanguage }}>
@@ -69,15 +78,18 @@ export function LanguageSwitcher({
     // Extract language from URL path if present (/es/page-slug)
     const pathMatch = location.pathname.match(/^\/([a-z]{2})(\/.*|$)/);
     if (pathMatch && availableLanguages.some(lang => lang.code === pathMatch[1])) {
+      // Update language context if URL contains a language prefix
       setCurrentLanguage(pathMatch[1]);
-    } else {
-      // Use browser language if available and supported
-      const browserLang = navigator.language?.split('-')[0];
-      if (browserLang && availableLanguages.some(lang => lang.code === browserLang)) {
-        setCurrentLanguage(browserLang);
-      }
+    } else if (currentLanguage !== 'en') {
+      // If URL doesn't have language prefix but we have a non-default language selected,
+      // redirect to the version with language prefix
+      const newPath = currentLanguage === 'en' 
+        ? location.pathname 
+        : `/${currentLanguage}${location.pathname === '/' ? '' : location.pathname}`;
+      
+      navigate(newPath, { replace: true });
     }
-  }, [location.pathname, availableLanguages, setCurrentLanguage]);
+  }, [location.pathname, availableLanguages, setCurrentLanguage, navigate, currentLanguage]);
 
   const handleLanguageChange = (langCode: string) => {
     if (langCode === currentLanguage) return;

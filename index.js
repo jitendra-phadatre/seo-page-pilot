@@ -55,6 +55,11 @@ exports.handler = async (event, context) => {
     if (langMatch && SUPPORTED_LANGUAGES.includes(langMatch[1])) {
       selectedLanguage = langMatch[1];
       appPath = langMatch[2] || '/';
+    } else {
+      // Try to use detected language from Accept-Language header
+      selectedLanguage = detectedLanguage && SUPPORTED_LANGUAGES.includes(detectedLanguage) 
+        ? detectedLanguage 
+        : 'en'; // Default to English
     }
     
     // For all app routes (not static assets), serve index.html
@@ -99,7 +104,26 @@ async function serveStaticFile(requestPath, basePath) {
 // Serve the app for SPA routing
 async function serveAppRoute(basePath, language) {
   const indexPath = path.join(basePath, 'index.html');
-  const fileContents = fs.readFileSync(indexPath);
+  let fileContents = fs.readFileSync(indexPath, 'utf8');
+  
+  // Optionally inject language information into the HTML
+  if (language) {
+    // Set the lang attribute in the HTML tag
+    fileContents = fileContents.replace(
+      /<html[^>]*>/i, 
+      `<html lang="${language}" ${language === 'ar' ? 'dir="rtl"' : 'dir="ltr"'}>`
+    );
+    
+    // Inject a script that sets the preferred language in localStorage
+    const languageScript = `<script>
+      if (!localStorage.getItem('preferred-language')) {
+        localStorage.setItem('preferred-language', '${language}');
+      }
+    </script>`;
+    
+    // Insert the script right before the closing </head> tag
+    fileContents = fileContents.replace('</head>', `${languageScript}</head>`);
+  }
   
   return {
     statusCode: 200,
@@ -109,7 +133,7 @@ async function serveAppRoute(basePath, language) {
       // Add language info in header for clients that need it
       'Content-Language': language || 'en'
     },
-    body: fileContents.toString('base64'),
+    body: Buffer.from(fileContents).toString('base64'),
     isBase64Encoded: true
   };
 }
