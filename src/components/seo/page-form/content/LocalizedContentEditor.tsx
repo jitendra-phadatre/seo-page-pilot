@@ -5,7 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Globe } from "lucide-react";
-import { MultilingualSeoPageData } from "@/lib/api";
+import { MultilingualSeoPageData } from "@/lib/multilingual-types";
+import { LocalizedPageContent } from "@/lib/multilingual-types";
 
 interface LocalizedContentEditorProps {
   multilingualData: MultilingualSeoPageData;

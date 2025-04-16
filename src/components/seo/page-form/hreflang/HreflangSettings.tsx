@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { MultilingualSeoPageData } from "@/lib/api";
+import { MultilingualSeoPageData } from "@/lib/multilingual-types";
 
 interface HreflangSettingsProps {
   multilingualData: MultilingualSeoPageData;

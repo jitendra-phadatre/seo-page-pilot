@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { MultilingualSeoPageData, getPageMultilingualData, updatePageMultilingualData } from "@/lib/api";
+import { LocalizedPageContent } from "@/lib/multilingual-types";
 
 export const useMultilingualData = (pageId: string) => {
   const [isLoading, setIsLoading] = useState(true);
